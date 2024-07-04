@@ -1,7 +1,6 @@
 # autoast is a script for batch processing the automated status tool
 # author: wburt
-
-
+# copyrite Governent of British Columbia
 # Copyright 2019 Province of British Columbia
 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +24,7 @@ from dotenv import load_dotenv
 import multiprocessing
 import geopandas
 import arcpy
+#import automated_status_sheet_call_routine_arcpro
 
 load_dotenv()
 SECRET_FILE = os.getenv('SECRET_FILE')
@@ -102,15 +102,22 @@ class AST_FACTORY:
                     job[k]=v
                 if job_condition.upper() != 'Complete':
                     self.jobs.append(job)
-        
+                if job['feature_layer']
+        return self.jobs
+    def classify_input_type(self,input):
+        input_type = None
+        file_name, extention = os.path.basename(input).split()
+
     def start_ast(self,job):
         '''starts a ast process from job params'''
+
         # TODO: Need a routine to execute and manage ast errors. Ideas:
         #   a. resolve ast toolbox import errors and import toolbox
         #   b. modify ast call routine to allow for os.system calls
         #   c. modify ast call routine to allow for import and exection as a functions
+        raise Exception("Build this")
+        
 
-        pass
 
     def batch_ast(self):
         ''' Executes the loaded jobs'''
@@ -146,8 +153,9 @@ class AST_FACTORY:
         return out_name + '/' + fc
 
 if __name__=='__main__':
-    qf = 'test.xlsx'
+    qf = r'test.xlsx'
     ast = AST_FACTORY(qf,DB_USER,DB_PASS)
+
     aoi = ast.build_aoi_from_kml('aoi.kml')
     if not os.path.exists(qf):
         ast.create_new_queuefile()
