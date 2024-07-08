@@ -30,6 +30,17 @@ import testScript
 
 # Load the default environment
 load_dotenv()
+
+
+# Import toolbox filepath from .env file
+ast_toolbox = os.getenv('TOOLBOX')
+
+# Check and Load AST Toolbox
+if ast_toolbox:
+    print(f"Loading AST Toolbox from drive")
+    arcpy.ImportToolbox(ast_toolbox)
+
+# Get the secret file containing the database credentials
 SECRET_FILE = os.getenv('SECRET_FILE')
 
 # If secret file found, load the secret file and display a print message, if not found display an error message
@@ -38,9 +49,12 @@ if SECRET_FILE:
     print(f"Secret file {SECRET_FILE} found")
 else:
     print("Secret file not found")
-    
+
+# Assign secret file data to variables    
 DB_USER = os.getenv('BCGW_USER')
 DB_PASS = os.getenv('BCGW_PASS')
+
+
 
 # If DB_USER and DB_PASS found display a print message, if not found display an error message
 if DB_USER and DB_PASS:
@@ -51,6 +65,7 @@ else:
 # Define current path of the executing script
 current_path = os.path.dirname(os.path.realpath(__file__))
 
+# Create the connection folder
 connection_folder = 'connection'
 connection_folder= os.path.join(current_path,connection_folder)
     
@@ -59,10 +74,11 @@ if not os.path.exists(connection_folder):
     print("Connection folder not found, creating new connection folder")
     os.mkdir(connection_folder)
 
-
+# Check for an existing bcgw connection, if there is one, remove it
 if os.path.exists(os.path.join(connection_folder,'bcgw.sde')):
     os.remove(os.path.join(connection_folder,'bcgw.sde'))
 
+# Create a bcgw connection
 bcgw_con = arcpy.management.CreateDatabaseConnection(connection_folder,
                                                     'bcgw.sde',
                                                     'ORACLE',
@@ -149,8 +165,9 @@ class AST_FACTORY:
         #raise Exception("Build this")
     
     # DELETE Chris delete THIS    
-    def start_testScript():
+    def start_testScript(self):
         print("Starting testScript")
+        testScript.test()  
 
 
     def batch_ast(self):
@@ -203,5 +220,6 @@ if __name__=='__main__':
         ast.create_new_queuefile()
     ast.load_jobs()
     ast.batch_ast()
+    ast.start_testScript()
     
 
