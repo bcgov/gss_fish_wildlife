@@ -129,34 +129,42 @@ def main():
     arcpy.AddMessage("\nReading Arguments")
     
     # Create empty variables (filled below)
-    region = ""                         #@UnusedVariable
-    disposition_number = ""             #@UnusedVariable
-    crown_file_number = ""              #@UnusedVariable
-    parcel_number = ""                  #@UnusedVariable
+    region = "NorthEast"                         #@UnusedVariable
+    disposition_number = "304639"             #@UnusedVariable
+    crown_file_number = "8010078"              #@UnusedVariable
+    parcel_number = "318969"                  #@UnusedVariable
     debug_version = ""                  #@UnusedVariable
     suppress_map_creation = ""          #@UnusedVariable
     output_dir_same_as_input = ""       #@UnusedVariable
     output_directory = ""               #@UnusedVariable
     add_maps_to_current = ""
 
-    
-    # Update variables with user inputs, if possible
-    region = arcpy.GetParameterAsText(0).lower()
-    feature_layer = arcpy.GetParameter(1)
-    # ___________
-    crown_file_number = arcpy.GetParameterAsText(2)
-    disposition_number = arcpy.GetParameterAsText(3)
-    parcel_number = arcpy.GetParameterAsText(4)
-    # ___________
-    output_directory = arcpy.GetParameterAsText(5)
-    output_dir_same_as_input = arcpy.GetParameterAsText(6)
-    dont_overwrite_outputs = arcpy.GetParameterAsText(7)
-    skip_conflicts_and_constraints = arcpy.GetParameterAsText(8)
-    suppress_map_creation = arcpy.GetParameterAsText(9)
-    add_maps_to_current = arcpy.GetParameterAsText(10)
-    run_as_fcbc = arcpy.GetParameterAsText(11)
-    # ___________
-    debug_version = arcpy.GetParameterAsText(12)
+    feature_layer = ""
+    output_dir_same_as_input = "false"
+    output_directory = r"C:\temp"
+    dont_overwrite_outputs = "false"
+    skip_conflicts_and_constraints = "true"
+    suppress_map_creation = "true"
+    add_maps_to_current = "false"
+    run_as_fcbc = "false"
+    debug_version = "false"
+    # # Update variables with user inputs, if possible
+    # region = arcpy.GetParameterAsText(0).lower()
+    # feature_layer = arcpy.GetParameter(1)
+    # # ___________
+    # crown_file_number = arcpy.GetParameterAsText(2)
+    # disposition_number = arcpy.GetParameterAsText(3)
+    # parcel_number = arcpy.GetParameterAsText(4)
+    # # ___________
+    # output_directory = arcpy.GetParameterAsText(5)
+    # output_dir_same_as_input = arcpy.GetParameterAsText(6)
+    # dont_overwrite_outputs = arcpy.GetParameterAsText(7)
+    # skip_conflicts_and_constraints = arcpy.GetParameterAsText(8)
+    # suppress_map_creation = arcpy.GetParameterAsText(9)
+    # add_maps_to_current = arcpy.GetParameterAsText(10)
+    # run_as_fcbc = arcpy.GetParameterAsText(11)
+    # # ___________
+    # debug_version = arcpy.GetParameterAsText(12)
 
 
     arcpy.AddMessage("======================================================================")

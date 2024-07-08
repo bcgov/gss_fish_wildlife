@@ -24,7 +24,7 @@ from dotenv import load_dotenv
 import multiprocessing
 import geopandas
 import arcpy
-# import automated_status_sheet_call_routine_arcpro as ast_toolbox
+import automated_status_sheet_call_routine_arcpro as ast_toolbox
 import testScript
 
 
@@ -155,9 +155,10 @@ class AST_FACTORY:
         input_type = None
         file_name, extention = os.path.basename(input).split()
 
-    def start_ast(self,job):
+    def start_ast(self): #Need to pass job in as arg
         '''starts a ast process from job params'''
         print("Starting AST")
+        rslt = arcpy.MakeAutomatedStatusSpreadsheet_ast()
         # TODO: Need a routine to execute and manage ast errors. Ideas:
         #   a. resolve ast toolbox import errors and import toolbox
         #   b. modify ast call routine to allow for os.system calls
@@ -221,5 +222,8 @@ if __name__=='__main__':
     ast.load_jobs()
     ast.batch_ast()
     ast.start_testScript()
+    ast.start_ast() 
+    
+    print("AST Factory Complete")
     
 
