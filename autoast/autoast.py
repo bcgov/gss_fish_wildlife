@@ -24,18 +24,42 @@ from dotenv import load_dotenv
 import multiprocessing
 import geopandas
 import arcpy
-#import automated_status_sheet_call_routine_arcpro
+# import automated_status_sheet_call_routine_arcpro as ast_toolbox
+import testScript
 
+
+# Load the default environment
 load_dotenv()
 SECRET_FILE = os.getenv('SECRET_FILE')
-load_dotenv(SECRET_FILE)
+
+# If secret file found, load the secret file and display a print message, if not found display an error message
+if SECRET_FILE:
+    load_dotenv(SECRET_FILE)
+    print(f"Secret file {SECRET_FILE} found")
+else:
+    print("Secret file not found")
+    
 DB_USER = os.getenv('BCGW_USER')
 DB_PASS = os.getenv('BCGW_PASS')
-connection_folder = 'connection'
+
+# If DB_USER and DB_PASS found display a print message, if not found display an error message
+if DB_USER and DB_PASS:
+    print(f"Database user {DB_USER} and password found")
+else:
+    print("Database user and password not found")
+
+# Define current path of the executing script
 current_path = os.path.dirname(os.path.realpath(__file__))
-if not os.path.exists(connection_folder):
-    os.mkdir(connection_folder)
+
+connection_folder = 'connection'
 connection_folder= os.path.join(current_path,connection_folder)
+    
+# Check for the existance of the connection folder and if it doesn't exist, print an error and create a new connection folder
+if not os.path.exists(connection_folder):
+    print("Connection folder not found, creating new connection folder")
+    os.mkdir(connection_folder)
+
+
 if os.path.exists(os.path.join(connection_folder,'bcgw.sde')):
     os.remove(os.path.join(connection_folder,'bcgw.sde'))
 
@@ -48,9 +72,13 @@ bcgw_con = arcpy.management.CreateDatabaseConnection(connection_folder,
                                                     DB_PASS,
                                                     'DO_NOT_SAVE_USERNAME')
 
+print("new db connection created")
+
 #ast_script = r'P:\corp\script_whse\python\Utility_Misc\Ready\statusing_tools_arcpro\scripts\automated_status_sheet_call_routine_arcpro.py'
-ast_script = 'automated_status_sheet_call_routine_arcpro.py'
+#ast_script = 'automated_status_sheet_call_routine_arcpro.py'
 arcpy.env.workspace = bcgw_con.getOutput(0)
+
+print("workspace set to bcgw connection")
 class AST_FACTORY:
     ''' AST_FACTORY creates and manages status tool runs '''
     XLSX_SHEET_NAME = 'ast_config'
@@ -78,6 +106,7 @@ class AST_FACTORY:
 
     def load_jobs(self):
         '''loads jobs from the jobqueue'''
+        print("Loading jobs")
         self.jobs = []
         assert os.path.exists(self.queuefile)
         if os.path.exists(self.queuefile):
@@ -102,33 +131,42 @@ class AST_FACTORY:
                     job[k]=v
                 if job_condition.upper() != 'Complete':
                     self.jobs.append(job)
-                if job['feature_layer']
+                if job['feature_layer']:
+                    pass
         return self.jobs
     def classify_input_type(self,input):
+        print("Classifying input type")
         input_type = None
         file_name, extention = os.path.basename(input).split()
 
     def start_ast(self,job):
         '''starts a ast process from job params'''
-
+        print("Starting AST")
         # TODO: Need a routine to execute and manage ast errors. Ideas:
         #   a. resolve ast toolbox import errors and import toolbox
         #   b. modify ast call routine to allow for os.system calls
         #   c. modify ast call routine to allow for import and exection as a functions
-        raise Exception("Build this")
-        
+        #raise Exception("Build this")
+    
+    # DELETE Chris delete THIS    
+    def start_testScript():
+        print("Starting testScript")
 
 
     def batch_ast(self):
         ''' Executes the loaded jobs'''
+        print("Batching AST")
         for job in self.jobs:
             self.start_ast(job)
     def add_job_result(self,job):
         ''' adds result information to job'''
         #TODO: Create a routine to add status/results to job
         pass
+    
+    
     def create_new_queuefile(self):
         '''write a new queuefile with preset header'''
+        print("Creating new queuefile")
         wb = Workbook()
         ws = wb.active
         ws.title = self.XLSX_SHEET_NAME
@@ -138,8 +176,11 @@ class AST_FACTORY:
             c = headers.index(h)+1
             ws.cell(row=1,column=c).value = h
         wb.save(self.queuefile)
+    
     def build_aoi_from_kml(self,aoi):
         "Write shp file for temporary use"
+        
+        print("Building AOI from KML")
         from fiona.drvsupport import supported_drivers
         supported_drivers['LIBKML'] = 'rw'
         tmp = os.getenv('TEMP')
@@ -153,10 +194,11 @@ class AST_FACTORY:
         return out_name + '/' + fc
 
 if __name__=='__main__':
-    qf = r'test.xlsx'
+    qf = os.path.join(current_path,'test.xlsx')
     ast = AST_FACTORY(qf,DB_USER,DB_PASS)
 
-    aoi = ast.build_aoi_from_kml('aoi.kml')
+    #NOTE script failed on build_aoi_from_kml so commented out
+    #aoi = ast.build_aoi_from_kml('aoi.kml')
     if not os.path.exists(qf):
         ast.create_new_queuefile()
     ast.load_jobs()
