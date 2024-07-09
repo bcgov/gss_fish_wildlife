@@ -27,18 +27,19 @@ import arcpy
 import automated_status_sheet_call_routine_arcpro as ast_toolbox
 import testScript
 
+print("Starting Script")
 
 # Load the default environment
 load_dotenv()
 
 
-# Import toolbox filepath from .env file
-ast_toolbox = os.getenv('TOOLBOX')
 
-# Check and Load AST Toolbox
-if ast_toolbox:
-    print(f"Loading AST Toolbox from drive")
-    arcpy.ImportToolbox(ast_toolbox)
+
+###############################################################################################################################################################################
+#
+# Set up the database connection
+#
+###############################################################################################################################################################################
 
 # Get the secret file containing the database credentials
 SECRET_FILE = os.getenv('SECRET_FILE')
@@ -53,7 +54,6 @@ else:
 # Assign secret file data to variables    
 DB_USER = os.getenv('BCGW_USER')
 DB_PASS = os.getenv('BCGW_PASS')
-
 
 
 # If DB_USER and DB_PASS found display a print message, if not found display an error message
@@ -90,8 +90,7 @@ bcgw_con = arcpy.management.CreateDatabaseConnection(connection_folder,
 
 print("new db connection created")
 
-#ast_script = r'P:\corp\script_whse\python\Utility_Misc\Ready\statusing_tools_arcpro\scripts\automated_status_sheet_call_routine_arcpro.py'
-#ast_script = 'automated_status_sheet_call_routine_arcpro.py'
+
 arcpy.env.workspace = bcgw_con.getOutput(0)
 
 print("workspace set to bcgw connection")
@@ -156,26 +155,34 @@ class AST_FACTORY:
         file_name, extention = os.path.basename(input).split()
 
     def start_ast(self): #Need to pass job in as arg
-        '''starts a ast process from job params'''
+        '''starts an ast process from job params'''
         print("Starting AST")
-        rslt = arcpy.MakeAutomatedStatusSpreadsheet_ast()
+        
+        ast_toolbox.ast_call_routine()
+        # ast_toolbox = os.getenv('TOOLBOX')
+        
+        #DELETE
+        # print(f"Toolbox: {ast_toolbox}")
+        # arcpy.ImportToolbox(ast_toolbox)
+        # rslt = arcpy.MakeAutomatedStatusSpreadsheet_ast()
+        
+        
         # TODO: Need a routine to execute and manage ast errors. Ideas:
         #   a. resolve ast toolbox import errors and import toolbox
         #   b. modify ast call routine to allow for os.system calls
         #   c. modify ast call routine to allow for import and exection as a functions
         #raise Exception("Build this")
     
-    # DELETE Chris delete THIS    
-    def start_testScript(self):
-        print("Starting testScript")
-        testScript.test()  
+
 
 
     def batch_ast(self):
         ''' Executes the loaded jobs'''
         print("Batching AST")
         for job in self.jobs:
-            self.start_ast(job)
+            #TODO: Uncomment this
+            # self.start_ast(job)
+            pass
     def add_job_result(self,job):
         ''' adds result information to job'''
         #TODO: Create a routine to add status/results to job
@@ -221,7 +228,6 @@ if __name__=='__main__':
         ast.create_new_queuefile()
     ast.load_jobs()
     ast.batch_ast()
-    ast.start_testScript()
     ast.start_ast() 
     
     print("AST Factory Complete")
