@@ -24,15 +24,15 @@ from dotenv import load_dotenv
 import multiprocessing
 import geopandas
 import arcpy
-import automated_status_sheet_call_routine_arcpro as ast_toolbox
-import testScript
+import automated_status_sheet_call_routine_arcpro as ast_call_script
+
 
 print("Starting Script")
 
 # Load the default environment
 load_dotenv()
 
-
+ast_toolbox = os.getenv('TOOLBOX') # This is only used if we choose the toolbox method of import
 
 
 ###############################################################################################################################################################################
@@ -118,7 +118,8 @@ class AST_FACTORY:
         self.user = db_user
         self.user_cred = db_pass
         self.queuefile = queuefile
-
+        self.jobs = []
+        
     def load_jobs(self):
         '''loads jobs from the jobqueue'''
         print("Loading jobs")
@@ -144,6 +145,7 @@ class AST_FACTORY:
                         if v is None:
                             v = ""
                     job[k]=v
+                    
                 if job_condition.upper() != 'Complete':
                     self.jobs.append(job)
                 if job['feature_layer']:
@@ -154,17 +156,12 @@ class AST_FACTORY:
         input_type = None
         file_name, extention = os.path.basename(input).split()
 
-    def start_ast(self): #Need to pass job in as arg
+    def start_ast_script(self): #Need to pass job in as arg
         '''starts an ast process from job params'''
         print("Starting AST")
         
-        ast_toolbox.ast_call_routine()
+        ast_call_script.ast_call_routine()
         # ast_toolbox = os.getenv('TOOLBOX')
-        
-        #DELETE
-        # print(f"Toolbox: {ast_toolbox}")
-        # arcpy.ImportToolbox(ast_toolbox)
-        # rslt = arcpy.MakeAutomatedStatusSpreadsheet_ast()
         
         
         # TODO: Need a routine to execute and manage ast errors. Ideas:
@@ -173,7 +170,26 @@ class AST_FACTORY:
         #   c. modify ast call routine to allow for import and exection as a functions
         #raise Exception("Build this")
     
+    def start_ast_tb(self,jobs): #Need to pass job in as arg
+        '''starts an ast toolbox from job params'''
+        print("Starting AST Toolbox")
+        
 
+        # print(f"Toolbox: {ast_toolbox}")
+        arcpy.ImportToolbox(ast_toolbox)
+        for job in jobs:
+            params = []
+            for param in self.AST_PARAMETERS.values():
+                params.append(job[param])
+        print(f"Params: {params}")
+        rslt = arcpy.MakeAutomatedStatusSpreadsheet_ast()
+        
+        
+        # TODO: Need a routine to execute and manage ast errors. Ideas:
+        #   a. resolve ast toolbox import errors and import toolbox
+        #   b. modify ast call routine to allow for os.system calls
+        #   c. modify ast call routine to allow for import and exection as a functions
+        #raise Exception("Build this")
 
 
     def batch_ast(self):
@@ -181,8 +197,9 @@ class AST_FACTORY:
         print("Batching AST")
         for job in self.jobs:
             #TODO: Uncomment this
-            # self.start_ast(job)
-            pass
+            self.start_ast_tb([job])
+            
+    
     def add_job_result(self,job):
         ''' adds result information to job'''
         #TODO: Create a routine to add status/results to job
@@ -226,9 +243,10 @@ if __name__=='__main__':
     #aoi = ast.build_aoi_from_kml('aoi.kml')
     if not os.path.exists(qf):
         ast.create_new_queuefile()
-    ast.load_jobs()
+    jobs = ast.load_jobs()
     ast.batch_ast()
-    ast.start_ast() 
+    #ast.start_ast_script() 
+    #ast.start_ast_tb(jobs)
     
     print("AST Factory Complete")
     
