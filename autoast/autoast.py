@@ -173,16 +173,29 @@ class AST_FACTORY:
     def start_ast_tb(self,jobs): #Need to pass job in as arg
         '''starts an ast toolbox from job params'''
         print("Starting AST Toolbox")
-        
 
-        # print(f"Toolbox: {ast_toolbox}")
+        print(f"Toolbox: {ast_toolbox}")
         arcpy.ImportToolbox(ast_toolbox)
         for job in jobs:
             params = []
             for param in self.AST_PARAMETERS.values():
-                params.append(job[param])
-        print(f"Params: {params}")
-        rslt = arcpy.MakeAutomatedStatusSpreadsheet_ast()
+                value = job[param]
+                if isinstance(value, str) and value.lower() in ['true', 'false']:
+                    value = True if value.lower() == 'true' else False
+                params.append(value)
+
+            # Ensure output_directory is set correctly
+            if job.get('output_directory_same_as_input', False):
+                job['output_directory'] = os.path.dirname(self.queuefile)
+
+            # Ensure that required parameters are provided
+            if not job.get('region'):
+                raise ValueError("Region is required and was not provided.")
+            if not job.get('output_directory'):
+                raise ValueError("Output directory is required and was not provided.")
+
+            print(f"Params: {params}")
+            rslt = arcpy.MakeAutomatedStatusSpreadsheet_ast(*params)
         
         
         # TODO: Need a routine to execute and manage ast errors. Ideas:
@@ -196,8 +209,9 @@ class AST_FACTORY:
         ''' Executes the loaded jobs'''
         print("Batching AST")
         for job in self.jobs:
-            #TODO: Uncomment this
+            
             self.start_ast_tb([job])
+            print("Job Complete")
             
     
     def add_job_result(self,job):
@@ -236,17 +250,17 @@ class AST_FACTORY:
         return out_name + '/' + fc
 
 if __name__=='__main__':
-    qf = os.path.join(current_path,'test.xlsx')
+    qf = os.path.join(current_path,'test_cs.xlsx')
     ast = AST_FACTORY(qf,DB_USER,DB_PASS)
 
-    #NOTE script failed on build_aoi_from_kml so commented out
+    
     #aoi = ast.build_aoi_from_kml('aoi.kml')
     if not os.path.exists(qf):
         ast.create_new_queuefile()
     jobs = ast.load_jobs()
     ast.batch_ast()
     #ast.start_ast_script() 
-    #ast.start_ast_tb(jobs)
+    ast.start_ast_tb(jobs)
     
     print("AST Factory Complete")
     

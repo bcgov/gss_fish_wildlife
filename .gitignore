@@ -168,3 +168,5 @@ autoast/test.xlsx
 autoast/connection/bcgw.sde
 autoast/ast_CS.atbx
 autoast/~$test.xlsx
+autoast/test_cs.xlsx
+autoast/testScript_cs.py
