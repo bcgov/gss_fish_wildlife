@@ -170,32 +170,53 @@ class AST_FACTORY:
         #   c. modify ast call routine to allow for import and exection as a functions
         #raise Exception("Build this")
     
-    def start_ast_tb(self,jobs): #Need to pass job in as arg
-        '''starts an ast toolbox from job params'''
-        print("Starting AST Toolbox")
 
-        print(f"Toolbox: {ast_toolbox}")
-        arcpy.ImportToolbox(ast_toolbox)
-        for job in jobs:
-            params = []
-            for param in self.AST_PARAMETERS.values():
-                value = job[param]
-                if isinstance(value, str) and value.lower() in ['true', 'false']:
-                    value = True if value.lower() == 'true' else False
-                params.append(value)
+    def start_ast_tb(self, jobs):
+        '''Starts an AST toolbox from job params'''
+        try:
+            print("Starting AST Toolbox")
 
-            # Ensure output_directory is set correctly
-            if job.get('output_directory_same_as_input', False):
-                job['output_directory'] = os.path.dirname(self.queuefile)
+            # print(f"Toolbox: {ast_toolbox}")
+            arcpy.ImportToolbox(ast_toolbox)
 
-            # Ensure that required parameters are provided
-            if not job.get('region'):
-                raise ValueError("Region is required and was not provided.")
-            if not job.get('output_directory'):
-                raise ValueError("Output directory is required and was not provided.")
+            for job in jobs:
+                params = []
+                try:
+                    for param in self.AST_PARAMETERS.values():
+                        value = job[param]
+                        if isinstance(value, str) and value.lower() in ['true', 'false']:
+                            value = True if value.lower() == 'true' else False
+                        params.append(value)
 
-            print(f"Params: {params}")
-            rslt = arcpy.MakeAutomatedStatusSpreadsheet_ast(*params)
+                    # Ensure output_directory is set correctly
+                    if job.get('output_directory_same_as_input', False):
+                        job['output_directory'] = os.path.dirname(self.queuefile)
+
+                    # Ensure that required parameters are provided
+                    if not job.get('region'):
+                        raise ValueError("Region is required and was not provided.")
+                    if not job.get('output_directory'):
+                        raise ValueError("Output directory is required and was not provided.")
+
+                    print(f"Params: {params}")
+                    rslt = arcpy.MakeAutomatedStatusSpreadsheet_ast(*params)
+                    
+                except KeyError as e:
+                    print(f"Error: Missing parameter in job configuration: {e}")
+                except ValueError as e:
+                    print(f"Error: {e}")
+                except arcpy.ExecuteError as e:
+                    print(f"Arcpy error: {arcpy.GetMessages(2)}")
+                except Exception as e:
+                    print(f"Unexpected error processing job: {e}")
+
+        except ImportError as e:
+            print(f"Error importing arcpy toolbox: {e}")
+        except arcpy.ExecuteError as e:
+            print(f"Arcpy error: {arcpy.GetMessages(2)}")
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+
         
         
         # TODO: Need a routine to execute and manage ast errors. Ideas:
@@ -205,13 +226,15 @@ class AST_FACTORY:
         #raise Exception("Build this")
 
 
+    
     def batch_ast(self):
         ''' Executes the loaded jobs'''
         print("Batching AST")
+        counter = 1
         for job in self.jobs:
-            
             self.start_ast_tb([job])
-            print("Job Complete")
+            print(f"Job {counter} Complete")
+            counter += 1
             
     
     def add_job_result(self,job):
