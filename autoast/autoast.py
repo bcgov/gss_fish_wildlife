@@ -24,7 +24,7 @@ from dotenv import load_dotenv
 import multiprocessing
 import geopandas
 import arcpy
-import automated_status_sheet_call_routine_arcpro as ast_call_script
+
 
 
 print("Starting Script")
