@@ -24,7 +24,8 @@ from dotenv import load_dotenv
 import multiprocessing
 import geopandas
 import arcpy
-
+            
+            
 
 
 print("Starting Script")
@@ -32,8 +33,20 @@ print("Starting Script")
 # Load the default environment
 load_dotenv()
 
-ast_toolbox = os.getenv('TOOLBOX') # This is only used if we choose the toolbox method of import
+# Get the toolbox path from environment variables
+ast_toolbox = os.getenv('TOOLBOX')
+if ast_toolbox is None:
+    print("Unable to find the toolbox. Check the path in .env file")
+    exit() 
 
+
+# Import the toolbox
+try:
+    arcpy.ImportToolbox(ast_toolbox)
+    print(f"AST Toolbox imported successfully.")
+except Exception as e:
+    print(f"Error importing toolbox: {e}")
+    exit()
 
 ###############################################################################################################################################################################
 #
@@ -164,8 +177,7 @@ class AST_FACTORY:
         try:
             print("Starting AST Toolbox")
 
-            # print(f"Toolbox: {ast_toolbox}")
-            arcpy.ImportToolbox(ast_toolbox)
+
 
             for job in jobs:
                 params = []
