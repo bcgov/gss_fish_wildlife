@@ -156,19 +156,7 @@ class AST_FACTORY:
         input_type = None
         file_name, extention = os.path.basename(input).split()
 
-    def start_ast_script(self): #Need to pass job in as arg
-        '''starts an ast process from job params'''
-        print("Starting AST")
-        
-        ast_call_script.ast_call_routine()
-        # ast_toolbox = os.getenv('TOOLBOX')
-        
-        
-        # TODO: Need a routine to execute and manage ast errors. Ideas:
-        #   a. resolve ast toolbox import errors and import toolbox
-        #   b. modify ast call routine to allow for os.system calls
-        #   c. modify ast call routine to allow for import and exection as a functions
-        #raise Exception("Build this")
+
     
 
     def start_ast_tb(self, jobs):
@@ -182,6 +170,7 @@ class AST_FACTORY:
             for job in jobs:
                 params = []
                 try:
+                    # Convert 'true'/'false' strings to booleans (For some reason the script was reading them all as lowercase strings)
                     for param in self.AST_PARAMETERS.values():
                         value = job[param]
                         if isinstance(value, str) and value.lower() in ['true', 'false']:
@@ -189,20 +178,32 @@ class AST_FACTORY:
                         params.append(value)
 
                     # Ensure output_directory is set correctly
-                    if job.get('output_directory_same_as_input', False):
-                        job['output_directory'] = os.path.dirname(self.queuefile)
+                    output_directory = job.get('output_directory')
+                    
+                    if not output_directory:
+                        # In case the user didn't fill in an output path on the excel sheet.
+                        # Arcpy will throw an error but the folder will still be created and the job still runs
+                        job_number = jobs.index(job) + 1
+                        output_directory = os.path.join('T:', f'job{job_number}')
+                        job['output_directory'] = output_directory
+                    
+                    # Create the output directory if it does not exist
+                    if not os.path.exists(output_directory):
+                        try:
+                            os.makedirs(output_directory)
+                            print(f"Output directory '{output_directory}' created.")
+                        except OSError as e:
+                            raise RuntimeError(f"Failed to create the output directory. Check your permissions '{output_directory}': {e}")
 
-                    # Ensure that required parameters are provided
+                    # Ensure that region has been entered otherwise job will fail
                     if not job.get('region'):
                         raise ValueError("Region is required and was not provided.")
-                    if not job.get('output_directory'):
-                        raise ValueError("Output directory is required and was not provided.")
-
-                    print(f"Params: {params}")
+                    
+                    print(f"Job Parameters are: {params}")
                     rslt = arcpy.MakeAutomatedStatusSpreadsheet_ast(*params)
                     
                 except KeyError as e:
-                    print(f"Error: Missing parameter in job configuration: {e}")
+                    print(f"Error: Missing parameter in the excel queuefile: {e}")
                 except ValueError as e:
                     print(f"Error: {e}")
                 except arcpy.ExecuteError as e:
@@ -211,7 +212,7 @@ class AST_FACTORY:
                     print(f"Unexpected error processing job: {e}")
 
         except ImportError as e:
-            print(f"Error importing arcpy toolbox: {e}")
+            print(f"Error importing arcpy toolbox. Check file path in .env file: {e}")
         except arcpy.ExecuteError as e:
             print(f"Arcpy error: {arcpy.GetMessages(2)}")
         except Exception as e:
@@ -276,8 +277,7 @@ if __name__=='__main__':
     qf = os.path.join(current_path,'test_cs.xlsx')
     ast = AST_FACTORY(qf,DB_USER,DB_PASS)
 
-    
-    #aoi = ast.build_aoi_from_kml('aoi.kml')
+    #aoi = ast.build_aoi_from_kml('aoi.kml') commented out because it was throwing an error
     if not os.path.exists(qf):
         ast.create_new_queuefile()
     jobs = ast.load_jobs()
