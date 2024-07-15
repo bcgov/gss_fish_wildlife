@@ -24,6 +24,7 @@ from dotenv import load_dotenv
 import multiprocessing
 import geopandas
 import arcpy
+import fiona
             
             
 
@@ -169,16 +170,16 @@ class AST_FACTORY:
         input_type = None
         file_name, extention = os.path.basename(input).split()
 
-
-    
-
     def start_ast_tb(self, jobs):
-        '''Starts an AST toolbox from job params'''
+        '''Starts an AST toolbox from job params. It will check the capitalization of the fTrue or False inputs and 
+        change them to appropriate booleans as the script was failing before implementing this.
+        It will also create the output directory if it does not exist based on the job number. Currently this is being created in the T: drive.
+        but should be updated once on the server. It checks to make a sure a region has be input on the excel sheet as this is a required parameter.
+        It will also catch any errors that are thrown and print them to the console.'''
         try:
             print("Starting AST Toolbox")
 
-
-
+            # Loop over the jobs in the spreadshhet
             for job in jobs:
                 params = []
                 try:
@@ -192,6 +193,7 @@ class AST_FACTORY:
                     # Ensure output_directory is set correctly
                     output_directory = job.get('output_directory')
                     
+                    # Create a folder path if one doesnt exist
                     if not output_directory:
                         # In case the user didn't fill in an output path on the excel sheet.
                         # Arcpy will throw an error but the folder will still be created and the job still runs
@@ -211,6 +213,7 @@ class AST_FACTORY:
                     if not job.get('region'):
                         raise ValueError("Region is required and was not provided.")
                     
+                    # Run the tool and send the result to "rslt"
                     print(f"Job Parameters are: {params}")
                     rslt = arcpy.MakeAutomatedStatusSpreadsheet_ast(*params)
                     
@@ -231,15 +234,7 @@ class AST_FACTORY:
             print(f"Unexpected error: {e}")
 
         
-        
-        # TODO: Need a routine to execute and manage ast errors. Ideas:
-        #   a. resolve ast toolbox import errors and import toolbox
-        #   b. modify ast call routine to allow for os.system calls
-        #   c. modify ast call routine to allow for import and exection as a functions
-        #raise Exception("Build this")
-
-
-    
+          
     def batch_ast(self):
         ''' Executes the loaded jobs'''
         print("Batching AST")
@@ -285,16 +280,20 @@ class AST_FACTORY:
         df.to_file(out_name,layer=fc,driver='OpenFileGDB')
         return out_name + '/' + fc
 
+    
+    
+    
+    
+    
 if __name__=='__main__':
     qf = os.path.join(current_path,'test_cs.xlsx')
     ast = AST_FACTORY(qf,DB_USER,DB_PASS)
 
-    #aoi = ast.build_aoi_from_kml('aoi.kml') commented out because it was throwing an error
+    # aoi = ast.build_aoi_from_kml('aoi.kml') 
     if not os.path.exists(qf):
         ast.create_new_queuefile()
     jobs = ast.load_jobs()
     ast.batch_ast()
-    #ast.start_ast_script() 
     ast.start_ast_tb(jobs)
     
     print("AST Factory Complete")
