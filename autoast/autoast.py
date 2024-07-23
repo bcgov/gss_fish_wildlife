@@ -112,28 +112,28 @@ class AST_FACTORY:
     ''' AST_FACTORY creates and manages status tool runs '''
     XLSX_SHEET_NAME = 'ast_config'
     AST_PARAMETERS = {
-            0:'region',
-            1:'feature_layer',
-            2:'crown_file_number',
-            3:'disposition_number',
-            4:'parcel_number',
-            5:'output_directory',
-            6:'output_directory_same_as_input',
-            7:'dont_overwrite_outputs',
-            8:'skip_conflicts_and_constraints',
-            9:'suppress_map_creation',
-            10:'add_maps_to_current',
-            11:'run_as_fcbc'
-            }
+        0: 'region',
+        1: 'feature_layer',
+        2: 'crown_file_number',
+        3: 'disposition_number',
+        4: 'parcel_number',
+        5: 'output_directory',
+        6: 'output_directory_same_as_input',
+        7: 'dont_overwrite_outputs',
+        8: 'skip_conflicts_and_constraints',
+        9: 'suppress_map_creation',
+        10: 'add_maps_to_current',
+        11: 'run_as_fcbc'
+    }
     AST_CONDITION_COLUMN = 'ast_condition'
     AST_SCRIPT = ''
 
-    def __init__(self,queuefile,db_user, db_pass) -> None:
+    def __init__(self, queuefile, db_user, db_pass) -> None:
         self.user = db_user
         self.user_cred = db_pass
         self.queuefile = queuefile
         self.jobs = []
-        
+
     def load_jobs(self):
         '''loads jobs from the jobqueue'''
         print("Loading jobs")
@@ -142,12 +142,12 @@ class AST_FACTORY:
         if os.path.exists(self.queuefile):
             wb = load_workbook(filename=self.queuefile)
             ws = wb[self.XLSX_SHEET_NAME]
-            header = list([row for row in ws.iter_rows(min_row=1, max_col=None,values_only=True)][0])
-            data = [row for row in ws.iter_rows(min_row=2, max_col=None,values_only=True)]
+            header = list([row for row in ws.iter_rows(min_row=1, max_col=None, values_only=True)][0])
+            data = [row for row in ws.iter_rows(min_row=2, max_col=None, values_only=True)]
             for d in data:
                 job = dict()
-                for k,v in zip(header,d):
-                    if k.lower() ==self.AST_CONDITION_COLUMN.lower():
+                for k, v in zip(header, d):
+                    if k.lower() == self.AST_CONDITION_COLUMN.lower():
                         if v is not None:
                             job_condition = v
                         elif v is None:
@@ -158,21 +158,27 @@ class AST_FACTORY:
                     else:
                         if v is None:
                             v = ""
-                    job[k]=v
-                    
+                    job[k] = v
+
                 if job_condition.upper() != 'Complete':
                     self.jobs.append(job)
-                
-                if job['feature_layer']:
-                    kml_file_path = job['feature_layer']
-                    print(f"Processing KML file: {kml_file_path}")
-                    job['feature_layer'] = self.build_aoi_from_kml(kml_file_path)
 
+                if job['feature_layer']:
+                    feature_layer_path = job['feature_layer']
+                    print(f"Processing feature layer: {feature_layer_path}")
+                    if feature_layer_path.lower().endswith('.kml'):
+                        job['feature_layer'] = self.build_aoi_from_kml(feature_layer_path)
+                    elif feature_layer_path.lower().endswith('.shp'):
+                        job['feature_layer'] = self.process_shapefile(feature_layer_path)
+                    else:
+                        print(f"Unsupported feature layer format: {feature_layer_path}")
+                        
         return self.jobs
-    def classify_input_type(self,input):
+
+    def classify_input_type(self, input):
         print("Classifying input type")
         input_type = None
-        file_name, extention = os.path.basename(input).split()
+        file_name, extension = os.path.basename(input).split()
 
     def start_ast_tb(self, jobs):
         '''Starts an AST toolbox from job params. It will check the capitalization of the fTrue or False inputs and 
@@ -183,7 +189,7 @@ class AST_FACTORY:
         try:
             print("Starting AST Toolbox")
 
-            # Loop over the jobs in the spreadshhet
+            # Loop over the jobs in the spreadsheet
             for job in jobs:
                 params = []
                 try:
@@ -196,15 +202,15 @@ class AST_FACTORY:
 
                     # Ensure output_directory is set correctly
                     output_directory = job.get('output_directory')
-                    
-                    # Create a folder path if one doesnt exist
+
+                    # Create a folder path if one doesn't exist
                     if not output_directory:
                         # In case the user didn't fill in an output path on the excel sheet.
                         # Arcpy will throw an error but the folder will still be created and the job still runs
                         job_number = jobs.index(job) + 1
                         output_directory = os.path.join('T:', f'job{job_number}')
                         job['output_directory'] = output_directory
-                    
+
                     # Create the output directory if it does not exist
                     if not os.path.exists(output_directory):
                         try:
@@ -216,11 +222,11 @@ class AST_FACTORY:
                     # Ensure that region has been entered otherwise job will fail
                     if not job.get('region'):
                         raise ValueError("Region is required and was not provided.")
-                    
+
                     # Run the tool and send the result to "rslt"
                     print(f"Job Parameters are: {params}")
                     rslt = arcpy.MakeAutomatedStatusSpreadsheet_ast(*params)
-                    
+
                 except KeyError as e:
                     print(f"Error: Missing parameter in the excel queuefile: {e}")
                 except ValueError as e:
@@ -237,8 +243,6 @@ class AST_FACTORY:
         except Exception as e:
             print(f"Unexpected error: {e}")
 
-        
-          
     def batch_ast(self):
         ''' Executes the loaded jobs'''
         print("Batching AST")
@@ -247,14 +251,12 @@ class AST_FACTORY:
             self.start_ast_tb([job])
             print(f"Job {counter} Complete")
             counter += 1
-            
-    
-    def add_job_result(self,job):
+
+    def add_job_result(self, job):
         ''' adds result information to job'''
-        #TODO: Create a routine to add status/results to job
+        # TODO: Create a routine to add status/results to job
         pass
-    
-    
+
     def create_new_queuefile(self):
         '''write a new queuefile with preset header'''
         print("Creating new queuefile")
@@ -264,24 +266,23 @@ class AST_FACTORY:
         headers = list(self.AST_PARAMETERS.values())
         headers.append(self.AST_CONDITION_COLUMN)
         for h in headers:
-            c = headers.index(h)+1
-            ws.cell(row=1,column=c).value = h
+            c = headers.index(h) + 1
+            ws.cell(row=1, column=c).value = h
         wb.save(self.queuefile)
-    
+
     def build_aoi_from_kml(self, aoi):
         "Write shp file for temporary use"
-        print("Building AOI from KML")
-        print(f"Checking if KML file exists: {aoi}")
-        
+
         # Ensure the KML file exists
         if not os.path.exists(aoi):
             raise FileNotFoundError(f"The KML file '{aoi}' does not exist.")
         
+        print("Building AOI from KML")
         from fiona.drvsupport import supported_drivers
         supported_drivers['LIBKML'] = 'rw'
         tmp = os.getenv('TEMP')
         if not tmp:
-            raise EnvironmentError("Error: TEMP environment variable is not set.")
+            raise EnvironmentError("TEMP environment variable is not set.")
         bname = os.path.basename(aoi).split('.')[0]
         fc = bname.replace(' ', '_')
         out_name = os.path.join(tmp, bname + '.gdb')
@@ -291,27 +292,23 @@ class AST_FACTORY:
         df.to_file(out_name, layer=fc, driver='OpenFileGDB')
         return out_name + '/' + fc
 
+    def process_shapefile(self, shapefile):
+        """Process shapefile and return the path for use in the job."""
+        print("Processing shapefile")
+        # Here, you can add any processing needed for the shapefile.
+        # For now, we'll assume the shapefile can be directly used.
+        return shapefile
 
-    
-    
-    
-    
-    
 if __name__ == '__main__':
     current_path = os.path.dirname(os.path.realpath(__file__))
     qf = os.path.join(current_path, 'test.xlsx')
     ast = AST_FACTORY(qf, DB_USER, DB_PASS)
-    
-    # Specify the absolute path to the KML file
-    kml_file_path = os.path.join(current_path, 'aoi.kml')
-    aoi = ast.build_aoi_from_kml(kml_file_path) 
-    
+
     if not os.path.exists(qf):
         ast.create_new_queuefile()
     jobs = ast.load_jobs()
     ast.batch_ast()
     ast.start_ast_tb(jobs)
-    
+
     print("AST Factory Complete")
-    
 
