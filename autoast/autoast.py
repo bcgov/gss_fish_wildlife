@@ -162,8 +162,12 @@ class AST_FACTORY:
                     
                 if job_condition.upper() != 'Complete':
                     self.jobs.append(job)
+                
                 if job['feature_layer']:
-                    pass
+                    kml_file_path = job['feature_layer']
+                    print(f"Processing KML file: {kml_file_path}")
+                    job['feature_layer'] = self.build_aoi_from_kml(kml_file_path)
+
         return self.jobs
     def classify_input_type(self,input):
         print("Classifying input type")
@@ -264,32 +268,44 @@ class AST_FACTORY:
             ws.cell(row=1,column=c).value = h
         wb.save(self.queuefile)
     
-    def build_aoi_from_kml(self,aoi):
+    def build_aoi_from_kml(self, aoi):
         "Write shp file for temporary use"
-        
         print("Building AOI from KML")
+        print(f"Checking if KML file exists: {aoi}")
+        
+        # Ensure the KML file exists
+        if not os.path.exists(aoi):
+            raise FileNotFoundError(f"The KML file '{aoi}' does not exist.")
+        
         from fiona.drvsupport import supported_drivers
         supported_drivers['LIBKML'] = 'rw'
         tmp = os.getenv('TEMP')
+        if not tmp:
+            raise EnvironmentError("Error: TEMP environment variable is not set.")
         bname = os.path.basename(aoi).split('.')[0]
-        fc = bname.replace(' ','_')
-        out_name = os.path.join(tmp,bname+'.gdb')
+        fc = bname.replace(' ', '_')
+        out_name = os.path.join(tmp, bname + '.gdb')
         if os.path.exists(out_name):
-            shutil.rmtree(out_name,ignore_errors=True)
+            shutil.rmtree(out_name, ignore_errors=True)
         df = geopandas.read_file(aoi)
-        df.to_file(out_name,layer=fc,driver='OpenFileGDB')
+        df.to_file(out_name, layer=fc, driver='OpenFileGDB')
         return out_name + '/' + fc
 
-    
-    
-    
-    
-    
-if __name__=='__main__':
-    qf = os.path.join(current_path,'test_cs.xlsx')
-    ast = AST_FACTORY(qf,DB_USER,DB_PASS)
 
-    # aoi = ast.build_aoi_from_kml('aoi.kml') 
+    
+    
+    
+    
+    
+if __name__ == '__main__':
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    qf = os.path.join(current_path, 'test.xlsx')
+    ast = AST_FACTORY(qf, DB_USER, DB_PASS)
+    
+    # Specify the absolute path to the KML file
+    kml_file_path = os.path.join(current_path, 'aoi.kml')
+    aoi = ast.build_aoi_from_kml(kml_file_path) 
+    
     if not os.path.exists(qf):
         ast.create_new_queuefile()
     jobs = ast.load_jobs()

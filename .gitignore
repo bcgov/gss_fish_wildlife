@@ -176,3 +176,12 @@ autoast/connection/bcgw.sde
 autoast/testScript_cs.py
 autoast/ast_CS.atbx
 autoast/aoi.kml
+autoast/autoast.py
+autoast/aoi.cpg
+autoast/aoi.dbf
+autoast/aoi.prj
+autoast/aoi.sbn
+autoast/aoi.sbx
+autoast/aoi.shp
+autoast/aoi.shp.xml
+autoast/aoi.shx
