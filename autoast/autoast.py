@@ -295,13 +295,12 @@ class AST_FACTORY:
     def process_shapefile(self, shapefile):
         """Process shapefile and return the path for use in the job."""
         print("Processing shapefile")
-        # Here, you can add any processing needed for the shapefile.
-        # For now, we'll assume the shapefile can be directly used.
+
         return shapefile
 
 if __name__ == '__main__':
     current_path = os.path.dirname(os.path.realpath(__file__))
-    qf = os.path.join(current_path, 'test.xlsx')
+    qf = os.path.join(current_path, 'july_23.xlsx')
     ast = AST_FACTORY(qf, DB_USER, DB_PASS)
 
     if not os.path.exists(qf):
