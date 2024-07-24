@@ -104,6 +104,7 @@ bcgw_con = arcpy.management.CreateDatabaseConnection(connection_folder,
 
 print("new db connection created")
 
+###############################################################################################################################################################################
 
 arcpy.env.workspace = bcgw_con.getOutput(0)
 
@@ -163,13 +164,19 @@ class AST_FACTORY:
                 if job_condition.upper() != 'Complete':
                     self.jobs.append(job)
 
+                # Check if there is a file path in Feature Layer
                 if job['feature_layer']:
+                    # Assign the path to a variable
                     feature_layer_path = job['feature_layer']
                     print(f"Processing feature layer: {feature_layer_path}")
+                    
+                    # Check if the feature layer is a kml or a shapefile. If it is a kml, run the build aoi from kml function, 
+                    # if it is a shapefile, run the process shapefile function
+                    # If it is neither, print an error message
                     if feature_layer_path.lower().endswith('.kml'):
                         job['feature_layer'] = self.build_aoi_from_kml(feature_layer_path)
                     elif feature_layer_path.lower().endswith('.shp'):
-                        job['feature_layer'] = self.process_shapefile(feature_layer_path)
+                        job['feature_layer'] = self.build_aoi_from_shp(feature_layer_path)
                     else:
                         print(f"Unsupported feature layer format: {feature_layer_path}")
                         
@@ -181,10 +188,10 @@ class AST_FACTORY:
         file_name, extension = os.path.basename(input).split()
 
     def start_ast_tb(self, jobs):
-        '''Starts an AST toolbox from job params. It will check the capitalization of the fTrue or False inputs and 
+        '''Starts an AST toolbox from job params. It will check the capitalization of the True or False inputs and 
         change them to appropriate booleans as the script was failing before implementing this.
         It will also create the output directory if it does not exist based on the job number. Currently this is being created in the T: drive.
-        but should be updated once on the server. It checks to make a sure a region has be input on the excel sheet as this is a required parameter.
+        but should be updated once on the server. It checks to make a sure a region has been input on the excel sheet as this is a required parameter.
         It will also catch any errors that are thrown and print them to the console.'''
         try:
             print("Starting AST Toolbox")
@@ -240,6 +247,7 @@ class AST_FACTORY:
             print(f"Error importing arcpy toolbox. Check file path in .env file: {e}")
         except arcpy.ExecuteError as e:
             print(f"Arcpy error: {arcpy.GetMessages(2)}")
+            
         except Exception as e:
             print(f"Unexpected error: {e}")
 
@@ -292,8 +300,10 @@ class AST_FACTORY:
         df.to_file(out_name, layer=fc, driver='OpenFileGDB')
         return out_name + '/' + fc
 
-    def process_shapefile(self, shapefile):
-        """Process shapefile and return the path for use in the job."""
+    def build_aoi_from_shp(self, shapefile):
+        """The shapefile entered will already have been processed using the FW Setup tool
+        but future version could have the append function happen in here, there the user
+        could add a raw shapefile that hasn't been processed"""
         print("Processing shapefile")
 
         return shapefile
