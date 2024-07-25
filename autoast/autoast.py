@@ -25,6 +25,7 @@ import multiprocessing
 import geopandas
 import arcpy
 import fiona
+import datetime
             
             
 
@@ -124,7 +125,8 @@ class AST_FACTORY:
         8: 'skip_conflicts_and_constraints',
         9: 'suppress_map_creation',
         10: 'add_maps_to_current',
-        11: 'run_as_fcbc'
+        11: 'run_as_fcbc',
+        12: 'file_number'
     }
     AST_CONDITION_COLUMN = 'ast_condition'
     AST_SCRIPT = ''
@@ -300,17 +302,108 @@ class AST_FACTORY:
         df.to_file(out_name, layer=fc, driver='OpenFileGDB')
         return out_name + '/' + fc
 
-    def build_aoi_from_shp(self, shapefile):
-        """The shapefile entered will already have been processed using the FW Setup tool
-        but future version could have the append function happen in here, there the user
-        could add a raw shapefile that hasn't been processed"""
-        print("Processing shapefile")
+    def build_aoi_from_shp(self, jobs, shapefile):
+        """This is snippets of Mike Eastwoods FW Setup Script, if run FW Setup is set to true **Not sure if we need this
+        as an option or just make it standard.
+        This function will take the raw un-appended shapefile and run it through the FW Setup Script"""
+        
+        # Mike Eastwoods FW Setup Script
+        print("Processing shapefile using FW Setup Script")
+        
+        arcpy.env.workspace = r"\\spatialfiles\work\lwbc\nsr\Workarea\fcbc_fsj\Wildlife"
+
+        arcpy.env.overwriteOutput = False
+
+        
+        #NOTE 
+        #TODO left off here
+                # Check if there is a file path in Feature Layer
+        if job['feature_layer']:
+            # Assign the path to a variable
+            feature_layer_path = job['feature_layer']
+            print(f"Processing feature layer: {feature_layer_path}")
+        
+        # Check to see if a file number was entered. File number is necessary to name the directory of the resulting appended shapefile.
+        if not self.jobs.get('file_number'):
+            raise ValueError("Error: File Number is required if you are putting in a shapefile that has not been processesd in the FW Setup Tool.")
+        else:
+            #NOTE file number could be obtained from the file path entered in the excel sheet?
+            file = self.job.get('file_number')
+            print(f"Running FW Setup on File Number: {file}")
+
+        # Calculate date variables
+        date = datetime.date.today()
+        year = str(date.year)
+
+
+
+        # Set variables
+        base = arcpy.env.workspace
+        baseYear = os.path.join(base, year)
+        outName = file.upper()
+        geometry = "POLYGON"
+        template = r"\\spatialfiles.bcgov\Work\lwbc\nsr\Workarea\fcbc_fsj\Templates\BLANK_polygon.shp"
+        m = "SAME_AS_TEMPLATE"
+        z = "SAME_AS_TEMPLATE"
+        spatialReference = arcpy.Describe(template).spatialReference
+
+        # ===========================================================================
+        # Create Folders
+        # ===========================================================================
+
+        print("Creating FW Setup folders . . .")
+        outName = file.upper()
+        
+        #Create path to folder location
+        fileFolder = os.path.join(baseYear, outName)
+
+        shapeFolder = fileFolder
+        outPath = shapeFolder
+        if os.path.exists(fileFolder):
+            print(outName + " folder already exists.")
+        else:
+            os.mkdir(fileFolder)
+
+
+
+        # ===========================================================================
+        # Create Shapefile(s) and add them to the current map
+        # ===========================================================================
+
+        print("Creating Shapefiles using FW Setup . . .")
+        if os.path.isfile(os.path.join(outPath, outName + ".shp")) == True:
+            print(os.path.join(outPath, outName + ".shp") + " already exists")
+            print("Exiting without creating files")
+            #sys.exit()
+        else:
+            # Creating template shapefile
+            create_shp = arcpy.management.CreateFeatureclass(outPath, outName, geometry, template, m, z, spatialReference)
+            #append the newly created shapefile with area of interest
+            append_shp = arcpy.management.Append(shapefile,create_shp,"NO_TEST")
+            print("Append Successful")
+            #making filename for kml
+            create_kml = os.path.join( outPath, outName + "."+"kml")
+            #make layer for kml to be converted from 
+            layer_shp =arcpy.management.MakeFeatureLayer(append_shp,outName)
+            #populate the shapefile                          
+            arcpy.conversion.LayerToKML(layer_shp,create_kml)
+            #send message to user that kml has been created
+            print("kml created: " + create_kml)
+
+
+
+
+        
+        
+        
+        
+        
 
         return shapefile
 
 if __name__ == '__main__':
     current_path = os.path.dirname(os.path.realpath(__file__))
-    qf = os.path.join(current_path, 'july_23.xlsx')
+    qf = os.path.join(current_path, 'july_24.xlsx')
     ast = AST_FACTORY(qf, DB_USER, DB_PASS)
 
     if not os.path.exists(qf):
