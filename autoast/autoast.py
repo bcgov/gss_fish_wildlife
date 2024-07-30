@@ -407,17 +407,10 @@ class AST_FACTORY:
 
 if __name__ == '__main__':
     current_path = os.path.dirname(os.path.realpath(__file__))
-    # Contains 2 jobs, no shapefiles, tested and working
-    #qf = os.path.join(current_path, 'test_cs_2_jobs.xlsx')
-    
-    # Contains 2 jobs with shapefile, no file number
-    #qf = os.path.join(current_path, 'test_2_shp_files_no_file_number.xlsx')
-    
+      
     # Contains 2 jobs with raw shapefile, with file number
     qf = os.path.join(current_path, 'test_2_shp_files_w_filenumber.xlsx')
-    
-    #Contains 2 jobs with FW Setup shapefile, no file number
-    #qf = os.path.join(current_path, 'test_2_FWSETUP_shp_files_no_file_number.xlsx')
+
     ast = AST_FACTORY(qf, DB_USER, DB_PASS)
 
     if not os.path.exists(qf):
