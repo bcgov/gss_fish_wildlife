@@ -125,11 +125,12 @@ class AST_FACTORY:
         8: 'skip_conflicts_and_constraints',
         9: 'suppress_map_creation',
         10: 'add_maps_to_current',
-        11: 'run_as_fcbc'
+        11: 'run_as_fcbc',
+        12: 'ast_condition'
     }
     
     ADDITIONAL_PARAMETERS = {
-        12: 'file_number'
+        13: 'file_number'
     }
     
     AST_CONDITION_COLUMN = 'ast_condition'
@@ -153,8 +154,9 @@ class AST_FACTORY:
             data = [row for row in ws.iter_rows(min_row=2, max_col=None, values_only=True)]
             for d in data:
                 job = dict()
+                job_condition = None
                 for k, v in zip(header, d):
-                    if k.lower() == self.AST_CONDITION_COLUMN.lower():
+                    if k is not None and k.lower() == self.AST_CONDITION_COLUMN.lower():
                         if v is not None:
                             job_condition = v
                         elif v is None:
@@ -165,32 +167,34 @@ class AST_FACTORY:
                     else:
                         if v is None:
                             v = ""
-                    job[k] = v
+                    if k is not None:
+                        job[k] = v
 
-                if job_condition.upper() != 'Complete':
+                if job_condition and job_condition.upper() != 'Complete':
                     self.jobs.append(job)
 
                 # Check if there is a file path in Feature Layer
-                if job['feature_layer']:
-                    # Assign the path to a variable
+                if job.get('feature_layer'):
+                    print(f'Feature layer found: {job["feature_layer"]}')
                     feature_layer_path = job['feature_layer']
                     print(f"Processing feature layer: {feature_layer_path}")
-                    
-                    # Check if the feature layer is a kml or a shapefile. If it is a kml, run the build aoi from kml function, 
-                    # if it is a shapefile, run the process shapefile function
-                    # If it is neither, print an error message
+
                     if feature_layer_path.lower().endswith('.kml'):
+                        print(f'Kml found, building AOI from KML')
                         job['feature_layer'] = self.build_aoi_from_kml(feature_layer_path)
                     elif feature_layer_path.lower().endswith('.shp'):
-                        # If the user has entered a FW file number in the excel sheet, then run the FW Setup script and replace the feature layer path with the output
                         if job.get('file_number'):
-                            job['feature_layer'] = self.build_aoi_from_shp(feature_layer_path)
+                            print(f"File number found, running FW setup on shapefile: {feature_layer_path}")
+                            new_feature_layer_path = self.build_aoi_from_shp(job, feature_layer_path)
+                            job['feature_layer'] = new_feature_layer_path
                         else:
                             print(f'No FW File Number provided for the shapefile, using original shapefile path')
                     else:
                         print(f"Unsupported feature layer format: {feature_layer_path}")
-                        
-        return self.jobs
+
+                            
+            return self.jobs
+
 
     def classify_input_type(self, input):
         print("Classifying input type")
@@ -321,45 +325,36 @@ class AST_FACTORY:
         """This is snippets of Mike Eastwoods FW Setup Script, if run FW Setup is set to true **Not sure if we need this
         as an option or just make it standard.
         This function will take the raw un-appended shapefile and run it through the FW Setup Script"""
-        
+
         # Mike Eastwoods FW Setup Script
         print("Processing shapefile using FW Setup Script")
         
         arcpy.env.workspace = r"\\spatialfiles\work\lwbc\nsr\Workarea\fcbc_fsj\Wildlife"
-
         arcpy.env.overwriteOutput = False
 
-        
-        #NOTE 
-        #TODO left off here
-                # Check if there is a file path in Feature Layer
+        # Check if there is a file path in Feature Layer
         if feature_layer_path:
             print(f"Processing feature layer: {feature_layer_path}")
+
         # Check to see if a file number was entered in the excel sheet, if so, use it to name the output directory and authorize the build_aoi_from_shp function to run
-        
         file_number = job.get('file_number')
         
-        # TODO might need to delete this, if file number is not present then the build_aoi_from_shp function will not run
         if not file_number:
-            raise ValueError("Error: File Number is required if you are putting in a shapefile that has not been processesd in the FW Setup Tool.")
+            raise ValueError("Error: File Number is required if you are putting in a shapefile that has not been processed in the FW Setup Tool.")
         else:
-             print(f"Running FW Setup on File Number: {file_number}")
-             
+            print(f"Running FW Setup on File Number: {file_number}")
             
+        # Convert file_number to string and make it uppercase
+        file_number_str = str(file_number).upper()
         
-        # Check to see if a file number was entered. File number is necessary to name the directory of the resulting appended shapefile.
-
-
         # Calculate date variables
         date = datetime.date.today()
         year = str(date.year)
 
-
-
         # Set variables
         base = arcpy.env.workspace
         baseYear = os.path.join(base, year)
-        outName = file_number.upper()
+        outName = file_number_str
         geometry = "POLYGON"
         template = r"\\spatialfiles.bcgov\Work\lwbc\nsr\Workarea\fcbc_fsj\Templates\BLANK_polygon.shp"
         m = "SAME_AS_TEMPLATE"
@@ -371,11 +366,10 @@ class AST_FACTORY:
         # ===========================================================================
 
         print("Creating FW Setup folders . . .")
-        outName = file_number.upper()
+        outName = file_number_str
         
-        #Create path to folder location
+        # Create path to folder location
         fileFolder = os.path.join(baseYear, outName)
-
         shapeFolder = fileFolder
         outPath = shapeFolder
         if os.path.exists(fileFolder):
@@ -383,54 +377,54 @@ class AST_FACTORY:
         else:
             os.mkdir(fileFolder)
 
-
-
         # ===========================================================================
         # Create Shapefile(s) and add them to the current map
         # ===========================================================================
 
         print("Creating Shapefiles using FW Setup . . .")
-        if os.path.isfile(os.path.join(outPath, outName + ".shp")) == True:
+        if os.path.isfile(os.path.join(outPath, outName + ".shp")):
             print(os.path.join(outPath, outName + ".shp") + " already exists")
             print("Exiting without creating files")
-            #sys.exit()
+            return os.path.join(outPath, outName + ".shp")
         else:
             # Creating template shapefile
             create_shp = arcpy.management.CreateFeatureclass(outPath, outName, geometry, template, m, z, spatialReference)
-            #append the newly created shapefile with area of interest
-            append_shp = arcpy.management.Append(feature_layer_path,create_shp,"NO_TEST")
+            # Append the newly created shapefile with area of interest
+            append_shp = arcpy.management.Append(feature_layer_path, create_shp, "NO_TEST")
             print("Append Successful")
-            #making filename for kml
-            create_kml = os.path.join(outPath, outName + "."+"kml")
-            #make layer for kml to be converted from 
-            layer_shp =arcpy.management.MakeFeatureLayer(append_shp,outName)
-            #populate the shapefile                          
-            arcpy.conversion.LayerToKML(layer_shp,create_kml)
-            #send message to user that kml has been created
+            # Making filename for kml
+            create_kml = os.path.join(outPath, outName + ".kml")
+            # Make layer for kml to be converted from 
+            layer_shp = arcpy.management.MakeFeatureLayer(append_shp, outName)
+            # Populate the shapefile                          
+            arcpy.conversion.LayerToKML(layer_shp, create_kml)
+            # Send message to user that kml has been created
             print("kml created: " + create_kml)
 
-            # Assign the newly appended shapefile to a variable
-            shapefile = outName            
+            print(f"FW Setup complete, returned shapefile is {os.path.join(outPath, outName + '.shp')}")
+            return os.path.join(outPath, outName + ".shp")
 
-
-        
-        
-        
-        
-        
-
-        return shapefile
 
 if __name__ == '__main__':
     current_path = os.path.dirname(os.path.realpath(__file__))
-    qf = os.path.join(current_path, 'test_2_shp_files.xlsx')
+    # Contains 2 jobs, no shapefiles, tested and working
+    #qf = os.path.join(current_path, 'test_cs_2_jobs.xlsx')
+    
+    # Contains 2 jobs with shapefile, no file number
+    #qf = os.path.join(current_path, 'test_2_shp_files_no_file_number.xlsx')
+    
+    # Contains 2 jobs with raw shapefile, with file number
+    qf = os.path.join(current_path, 'test_2_shp_files_w_filenumber.xlsx')
+    
+    #Contains 2 jobs with FW Setup shapefile, no file number
+    #qf = os.path.join(current_path, 'test_2_FWSETUP_shp_files_no_file_number.xlsx')
     ast = AST_FACTORY(qf, DB_USER, DB_PASS)
 
     if not os.path.exists(qf):
+        print("Queuefile not found, creating new queuefile")
         ast.create_new_queuefile()
     jobs = ast.load_jobs()
     ast.batch_ast()
     ast.start_ast_tb(jobs)
 
     print("AST Factory Complete")
-
