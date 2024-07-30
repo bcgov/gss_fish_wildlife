@@ -410,7 +410,7 @@ if __name__ == '__main__':
       
     # Contains 2 jobs with raw shapefile, with file number
     qf = os.path.join(current_path, 'test_2_shp_files_w_filenumber.xlsx')
-
+    #qf = os.path.join(current_path, '4jobs.xlsx')
     ast = AST_FACTORY(qf, DB_USER, DB_PASS)
 
     if not os.path.exists(qf):
