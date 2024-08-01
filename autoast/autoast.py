@@ -26,17 +26,29 @@ import geopandas
 import arcpy
 import fiona
 import datetime
+import logging
             
             
 
 
 print("Starting Script")
 
+# Set up logging
+# Create the log folder filename
+log_folder = f'autoast_logs_{datetime.datetime.now().strftime("%Y%m%d")}'
+
+# Create the log folder in the current directory if it doesnt exits
+if not os.path.exists(log_folder):
+    os.mkdir(log_folder)
+
+
+
 # Load the default environment
 load_dotenv()
 
 # Get the toolbox path from environment variables
-ast_toolbox = os.getenv('TOOLBOX')
+#ast_toolbox = os.getenv('TOOLBOX') # File path 
+ast_toolbox = r'\\spatialfiles.bcgov\work\srm\nel\Local\Geomatics\Workarea\wburt\p2024\autoast\ast.atbx'
 if ast_toolbox is None:
     print("Unable to find the toolbox. Check the path in .env file")
     exit() 
@@ -209,7 +221,7 @@ class AST_FACTORY:
         It will also catch any errors that are thrown and print them to the console.'''
         try:
             print("Starting AST Toolbox")
-
+            logging.info("Starting AST Toolbox")
             # Loop over the jobs in the spreadsheet
             for job in jobs:
                 params = []
@@ -239,8 +251,10 @@ class AST_FACTORY:
                         try:
                             os.makedirs(output_directory)
                             print(f"Output directory '{output_directory}' created.")
+                            logging.info(f"Output directory '{output_directory}' created.")
                         except OSError as e:
                             raise RuntimeError(f"Failed to create the output directory. Check your permissions '{output_directory}': {e}")
+                        
 
                     # Ensure that region has been entered otherwise job will fail
                     if not job.get('region'):
@@ -274,9 +288,14 @@ class AST_FACTORY:
         print("Batching AST")
         counter = 1
         for job in self.jobs:
+            job_number = jobs.index(job) + 1
+            log_file = os.path.join(log_folder,  f'ast_log_job_{job_number}_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
+            logging.basicConfig(fielname = log_file,
+                                level = logging.DEBUG,
+                                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             self.start_ast_tb([job])
             print(f"Job {counter} Complete")
-            counter += 1
+            
 
     def add_job_result(self, job):
         ''' adds result information to job'''
@@ -409,7 +428,7 @@ if __name__ == '__main__':
     current_path = os.path.dirname(os.path.realpath(__file__))
       
     # Contains 2 jobs with raw shapefile, with file number
-    qf = os.path.join(current_path, 'test_2_shp_files_w_filenumber.xlsx')
+    qf = os.path.join(current_path, '4_jobs_Sunny.xlsx')
 
     ast = AST_FACTORY(qf, DB_USER, DB_PASS)
 
