@@ -29,6 +29,7 @@ import logging
 
 
 # Set up logging
+
 # Create the log folder filename
 log_folder = f'autoast_logs_{datetime.datetime.now().strftime("%Y%m%d")}'
 
@@ -52,14 +53,14 @@ logger.info("Logging set up")
 
 print("Starting Script")
 logger.info("Starting Script")
-c
+
 
 # Load the default environment
 load_dotenv()
 
 # Get the toolbox path from environment variables
-#ast_toolbox = os.getenv('TOOLBOX') # File path 
-ast_toolbox = r'\\spatialfiles.bcgov\work\srm\nel\Local\Geomatics\Workarea\wburt\p2024\autoast\ast.atbx'
+ast_toolbox = os.getenv('TOOLBOX') # File path 
+
 if ast_toolbox is None:
     print("Unable to find the toolbox. Check the path in .env file")
     logger.error("Unable to find the toolbox. Check the path in .env file")
@@ -74,6 +75,13 @@ except Exception as e:
     print(f"Error importing toolbox: {e}")
     logger.error(f"Error importing toolbox: {e}")
     exit()
+
+# Assign the shapefile template for FW Setup to a variable
+template = os.getenv('TEMPLATE') # File path in .env
+if template is None:
+    print("Unable to find the template. Check the path in .env file")
+    logger.error("Unable to find the template. Check the path in .env file")
+    
 
 ###############################################################################################################################################################################
 #
@@ -383,7 +391,8 @@ class AST_FACTORY:
         print("Processing shapefile using FW Setup Script")
         logger.info("Processing shapefile using FW Setup Script")
         
-        arcpy.env.workspace = r"\\spatialfiles\work\lwbc\nsr\Workarea\fcbc_fsj\Wildlife"
+        fsj_workspace = os.getenv('FSJ_WORKSPACE')
+        arcpy.env.workspace = fsj_workspace
         arcpy.env.overwriteOutput = False
 
         # Check if there is a file path in Feature Layer
@@ -412,7 +421,7 @@ class AST_FACTORY:
         baseYear = os.path.join(base, year)
         outName = file_number_str
         geometry = "POLYGON"
-        template = r"\\spatialfiles.bcgov\Work\lwbc\nsr\Workarea\fcbc_fsj\Templates\BLANK_polygon.shp"
+    
         m = "SAME_AS_TEMPLATE"
         z = "SAME_AS_TEMPLATE"
         spatialReference = arcpy.Describe(template).spatialReference
