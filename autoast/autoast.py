@@ -27,7 +27,12 @@ import fiona
 import datetime
 import logging
 
+## *** INPUT YOUR EXCEL FILE NAME HERE ***
+excel_file = '4_jobs_Sunny.xlsx'
 
+
+
+###############################################################################################################################################################################
 # Set up logging
 
 # Create the log folder filename
@@ -53,7 +58,7 @@ logger.info("Logging set up")
 
 print("Starting Script")
 logger.info("Starting Script")
-
+###############################################################################################################################################################################
 
 # Load the default environment
 load_dotenv()
@@ -143,12 +148,12 @@ bcgw_con = arcpy.management.CreateDatabaseConnection(connection_folder,
 print("new db connection created")
 logger.info("new db connection created")
 
-###############################################################################################################################################################################
 
 arcpy.env.workspace = bcgw_con.getOutput(0)
 
 print("workspace set to bcgw connection")
 logger.info("workspace set to bcgw connection")
+###############################################################################################################################################################################
 
 class AST_FACTORY:
     ''' AST_FACTORY creates and manages status tool runs '''
@@ -268,27 +273,27 @@ class AST_FACTORY:
                             value = True if value.lower() == 'true' else False
                         params.append(value)
 
-                    # Ensure output_directory is set correctly
-                    output_directory = job.get('output_directory')
+                    # # Ensure output_directory is set correctly
+                    # output_directory = job.get('output_directory')
 
-                    # Create a folder path on the T:\ drive (to be changed later) if one doesn't exist
-                    if not output_directory:
-                        # In case the user didn't fill in an output path on the excel sheet.
-                        # Arcpy will throw an error but the folder will still be created and the job still runs
+                    # # Create a folder path on the T:\ drive (to be changed later) if one doesn't exist
+                    # if not output_directory:
+                    #     # In case the user didn't fill in an output path on the excel sheet.
+                    #     # Arcpy will throw an error but the folder will still be created and the job still runs
 
-                        #TODO need to update from the T:\ drive to the server
-                        job_number = jobs.index(job) + 1
-                        output_directory = os.path.join('T:', f'job{job_number}')
-                        job['output_directory'] = output_directory
+                    #     #TODO need to update from the T:\ drive to the server
+                    #     job_number = jobs.index(job) + 1
+                    #     output_directory = os.path.join('T:', f'job{job_number}')
+                    #     job['output_directory'] = output_directory
 
-                    # Create the output directory if it does not exist
-                    if not os.path.exists(output_directory):
-                        try:
-                            os.makedirs(output_directory)
-                            print(f"Output directory '{output_directory}' created.")
-                            logging.info(f"Output directory '{output_directory}' created.")
-                        except OSError as e:
-                            raise RuntimeError(f"Failed to create the output directory. Check your permissions '{output_directory}': {e}")
+                    # # Create the output directory if it does not exist
+                    # if not os.path.exists(output_directory):
+                    #     try:
+                    #         os.makedirs(output_directory)
+                    #         print(f"Output directory '{output_directory}' created.")
+                    #         logging.info(f"Output directory '{output_directory}' created.")
+                    #     except OSError as e:
+                    #         raise RuntimeError(f"Failed to create the output directory. Check your permissions '{output_directory}': {e}")
 
                     # Ensure that region has been entered otherwise job will fail
                     if not job.get('region'):
@@ -481,7 +486,7 @@ if __name__ == '__main__':
     current_path = os.path.dirname(os.path.realpath(__file__))
     
     # Contains 2 jobs with raw shapefile, with file number
-    qf = os.path.join(current_path, '2_quick_jobs.xlsx')
+    qf = os.path.join(current_path, excel_file)
 
     ast = AST_FACTORY(qf, DB_USER, DB_PASS)
 
