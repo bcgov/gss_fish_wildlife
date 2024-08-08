@@ -15,40 +15,78 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import sys
 import os
 import shutil
-from openpyxl import Workbook,load_workbook
+from openpyxl import Workbook, load_workbook
 from dotenv import load_dotenv
 import multiprocessing
 import geopandas
 import arcpy
 import fiona
 import datetime
-            
-            
+import logging
 
+## *** INPUT YOUR EXCEL FILE NAME HERE ***
+excel_file = '4_jobs_Sunny.xlsx'
+
+
+
+###############################################################################################################################################################################
+# Set up logging
+
+# Create the log folder filename
+log_folder = f'autoast_logs_{datetime.datetime.now().strftime("%Y%m%d")}'
+
+# Create the log folder in the current directory if it doesnt exits
+if not os.path.exists(log_folder):
+    os.mkdir(log_folder)
+
+# Create the log file path with the date and time appended
+log_file = os.path.join(log_folder, f'ast_log_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
+
+# Set up logging config to DEBUG level
+logging.basicConfig(filename=log_file, 
+                    level=logging.DEBUG, 
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# Create the logger object and set to the current file name
+logger = logging.getLogger(__name__)
+
+print("Logging set up")
+logger.info("Logging set up")
 
 print("Starting Script")
+logger.info("Starting Script")
+###############################################################################################################################################################################
 
 # Load the default environment
 load_dotenv()
 
 # Get the toolbox path from environment variables
-ast_toolbox = os.getenv('TOOLBOX')
+ast_toolbox = os.getenv('TOOLBOX') # File path 
+
 if ast_toolbox is None:
     print("Unable to find the toolbox. Check the path in .env file")
+    logger.error("Unable to find the toolbox. Check the path in .env file")
     exit() 
-
 
 # Import the toolbox
 try:
     arcpy.ImportToolbox(ast_toolbox)
     print(f"AST Toolbox imported successfully.")
+    logger.info(f"AST Toolbox imported successfully.")
 except Exception as e:
     print(f"Error importing toolbox: {e}")
+    logger.error(f"Error importing toolbox: {e}")
     exit()
+
+# Assign the shapefile template for FW Setup to a variable
+template = os.getenv('TEMPLATE') # File path in .env
+if template is None:
+    print("Unable to find the template. Check the path in .env file")
+    logger.error("Unable to find the template. Check the path in .env file")
+    
 
 ###############################################################################################################################################################################
 #
@@ -63,35 +101,39 @@ SECRET_FILE = os.getenv('SECRET_FILE')
 if SECRET_FILE:
     load_dotenv(SECRET_FILE)
     print(f"Secret file {SECRET_FILE} found")
+    logger.info(f"Secret file {SECRET_FILE} found")
 else:
     print("Secret file not found")
+    logger.error("Secret file not found")
 
 # Assign secret file data to variables    
 DB_USER = os.getenv('BCGW_USER')
 DB_PASS = os.getenv('BCGW_PASS')
 
-
 # If DB_USER and DB_PASS found display a print message, if not found display an error message
 if DB_USER and DB_PASS:
     print(f"Database user {DB_USER} and password found")
+    logger.info(f"Database user {DB_USER} and password found")
 else:
     print("Database user and password not found")
+    logger.error("Database user and password not found")
 
 # Define current path of the executing script
 current_path = os.path.dirname(os.path.realpath(__file__))
 
 # Create the connection folder
 connection_folder = 'connection'
-connection_folder= os.path.join(current_path,connection_folder)
-    
+connection_folder = os.path.join(current_path, connection_folder)
+
 # Check for the existance of the connection folder and if it doesn't exist, print an error and create a new connection folder
 if not os.path.exists(connection_folder):
     print("Connection folder not found, creating new connection folder")
+    logger.info("Connection folder not found, creating new connection folder")
     os.mkdir(connection_folder)
 
 # Check for an existing bcgw connection, if there is one, remove it
-if os.path.exists(os.path.join(connection_folder,'bcgw.sde')):
-    os.remove(os.path.join(connection_folder,'bcgw.sde'))
+if os.path.exists(os.path.join(connection_folder, 'bcgw.sde')):
+    os.remove(os.path.join(connection_folder, 'bcgw.sde'))
 
 # Create a bcgw connection
 bcgw_con = arcpy.management.CreateDatabaseConnection(connection_folder,
@@ -104,12 +146,15 @@ bcgw_con = arcpy.management.CreateDatabaseConnection(connection_folder,
                                                     'DO_NOT_SAVE_USERNAME')
 
 print("new db connection created")
+logger.info("new db connection created")
 
-################################################################################################################################################################################
 
 arcpy.env.workspace = bcgw_con.getOutput(0)
 
 print("workspace set to bcgw connection")
+logger.info("workspace set to bcgw connection")
+###############################################################################################################################################################################
+
 class AST_FACTORY:
     ''' AST_FACTORY creates and manages status tool runs '''
     XLSX_SHEET_NAME = 'ast_config'
@@ -145,6 +190,7 @@ class AST_FACTORY:
     def load_jobs(self):
         '''loads jobs from the jobqueue'''
         print("Loading jobs")
+        logger.info("Loading jobs")
         self.jobs = []
         assert os.path.exists(self.queuefile)
         if os.path.exists(self.queuefile):
@@ -176,28 +222,33 @@ class AST_FACTORY:
                 # Check if there is a file path in Feature Layer
                 if job.get('feature_layer'):
                     print(f'Feature layer found: {job["feature_layer"]}')
+                    logger.info(f'Feature layer found: {job["feature_layer"]}')
                     feature_layer_path = job['feature_layer']
                     print(f"Processing feature layer: {feature_layer_path}")
+                    logger.info(f"Processing feature layer: {feature_layer_path}")
 
                     if feature_layer_path.lower().endswith('.kml'):
                         print(f'Kml found, building AOI from KML')
+                        logger.info(f'Kml found, building AOI from KML')
                         job['feature_layer'] = self.build_aoi_from_kml(feature_layer_path)
                     elif feature_layer_path.lower().endswith('.shp'):
                         if job.get('file_number'):
                             print(f"File number found, running FW setup on shapefile: {feature_layer_path}")
+                            logger.info(f"File number found, running FW setup on shapefile: {feature_layer_path}")
                             new_feature_layer_path = self.build_aoi_from_shp(job, feature_layer_path)
                             job['feature_layer'] = new_feature_layer_path
                         else:
                             print(f'No FW File Number provided for the shapefile, using original shapefile path')
+                            logger.info(f'No FW File Number provided for the shapefile, using original shapefile path')
                     else:
                         print(f"Unsupported feature layer format: {feature_layer_path}")
+                        logger.warning(f"Unsupported feature layer format: {feature_layer_path}")
 
-                            
             return self.jobs
-
 
     def classify_input_type(self, input):
         print("Classifying input type")
+        logger.info("Classifying input type")
         input_type = None
         file_name, extension = os.path.basename(input).split()
 
@@ -209,6 +260,7 @@ class AST_FACTORY:
         It will also catch any errors that are thrown and print them to the console.'''
         try:
             print("Starting AST Toolbox")
+            logging.info("Starting AST Toolbox")
 
             # Loop over the jobs in the spreadsheet
             for job in jobs:
@@ -221,26 +273,27 @@ class AST_FACTORY:
                             value = True if value.lower() == 'true' else False
                         params.append(value)
 
-                    # Ensure output_directory is set correctly
-                    output_directory = job.get('output_directory')
+                    # # Ensure output_directory is set correctly
+                    # output_directory = job.get('output_directory')
 
-                    # Create a folder path on the T:\ drive (to be changed later) if one doesn't exist
-                    if not output_directory:
-                        # In case the user didn't fill in an output path on the excel sheet.
-                        # Arcpy will throw an error but the folder will still be created and the job still runs
-                        
-                        #TODO need to update from the T:\ drive to the server
-                        job_number = jobs.index(job) + 1
-                        output_directory = os.path.join('T:', f'job{job_number}')
-                        job['output_directory'] = output_directory
+                    # # Create a folder path on the T:\ drive (to be changed later) if one doesn't exist
+                    # if not output_directory:
+                    #     # In case the user didn't fill in an output path on the excel sheet.
+                    #     # Arcpy will throw an error but the folder will still be created and the job still runs
 
-                    # Create the output directory if it does not exist
-                    if not os.path.exists(output_directory):
-                        try:
-                            os.makedirs(output_directory)
-                            print(f"Output directory '{output_directory}' created.")
-                        except OSError as e:
-                            raise RuntimeError(f"Failed to create the output directory. Check your permissions '{output_directory}': {e}")
+                    #     #TODO need to update from the T:\ drive to the server
+                    #     job_number = jobs.index(job) + 1
+                    #     output_directory = os.path.join('T:', f'job{job_number}')
+                    #     job['output_directory'] = output_directory
+
+                    # # Create the output directory if it does not exist
+                    # if not os.path.exists(output_directory):
+                    #     try:
+                    #         os.makedirs(output_directory)
+                    #         print(f"Output directory '{output_directory}' created.")
+                    #         logging.info(f"Output directory '{output_directory}' created.")
+                    #     except OSError as e:
+                    #         raise RuntimeError(f"Failed to create the output directory. Check your permissions '{output_directory}': {e}")
 
                     # Ensure that region has been entered otherwise job will fail
                     if not job.get('region'):
@@ -248,34 +301,44 @@ class AST_FACTORY:
 
                     # Run the tool and send the result to "rslt"
                     print(f"Job Parameters are: {params}")
+                    logger.info(f"Job Parameters are: {params}")
                     rslt = arcpy.MakeAutomatedStatusSpreadsheet_ast(*params)
-                    
+
                     #TODO change this print to logging
                     print(f"Result: {rslt}")
+                    logger.info(f"Result: {rslt}")
                 except KeyError as e:
                     print(f"Error: Missing parameter in the excel queuefile: {e}")
+                    logger.error(f"Error: Missing parameter in the excel queuefile: {e}")
                 except ValueError as e:
                     print(f"Error: {e}")
+                    logger.error(f"Error: {e}")
                 except arcpy.ExecuteError as e:
                     print(f"Arcpy error: {arcpy.GetMessages(2)}")
+                    logger.error(f"Arcpy error: {arcpy.GetMessages(2)}")
                 except Exception as e:
                     print(f"Unexpected error processing job: {e}")
+                    logger.error(f"Unexpected error processing job: {e}")
 
         except ImportError as e:
             print(f"Error importing arcpy toolbox. Check file path in .env file: {e}")
+            logger.error(f"Error importing arcpy toolbox. Check file path in .env file: {e}")
         except arcpy.ExecuteError as e:
             print(f"Arcpy error: {arcpy.GetMessages(2)}")
-            
+            logger.error(f"Arcpy error: {arcpy.GetMessages(2)}")
         except Exception as e:
             print(f"Unexpected error: {e}")
+            logger.error(f"Unexpected error: {e}")
 
     def batch_ast(self):
         ''' Executes the loaded jobs'''
         print("Batching AST")
+        logger.info("Batching AST")
         counter = 1
         for job in self.jobs:
             self.start_ast_tb([job])
             print(f"Job {counter} Complete")
+            logger.info(f"Job {counter} Complete")
             counter += 1
 
     def add_job_result(self, job):
@@ -286,6 +349,7 @@ class AST_FACTORY:
     def create_new_queuefile(self):
         '''write a new queuefile with preset header'''
         print("Creating new queuefile")
+        logger.info("Creating new queuefile")
         wb = Workbook()
         ws = wb.active
         ws.title = self.XLSX_SHEET_NAME
@@ -302,8 +366,9 @@ class AST_FACTORY:
         # Ensure the KML file exists
         if not os.path.exists(aoi):
             raise FileNotFoundError(f"The KML file '{aoi}' does not exist.")
-        
+
         print("Building AOI from KML")
+        logger.info("Building AOI from KML")
         from fiona.drvsupport import supported_drivers
         supported_drivers['LIBKML'] = 'rw'
         tmp = os.getenv('TEMP')
@@ -316,9 +381,10 @@ class AST_FACTORY:
             shutil.rmtree(out_name, ignore_errors=True)
         df = geopandas.read_file(aoi)
         df.to_file(out_name, layer=fc, driver='OpenFileGDB')
-        
+
         #DELETE
         print(f' kml ouput is {out_name} / {fc}')
+        logger.info(f' kml ouput is {out_name} / {fc}')
         return out_name + '/' + fc
 
     def build_aoi_from_shp(self, job, feature_layer_path):
@@ -328,25 +394,29 @@ class AST_FACTORY:
 
         # Mike Eastwoods FW Setup Script
         print("Processing shapefile using FW Setup Script")
+        logger.info("Processing shapefile using FW Setup Script")
         
-        arcpy.env.workspace = r"\\spatialfiles\work\lwbc\nsr\Workarea\fcbc_fsj\Wildlife"
+        fsj_workspace = os.getenv('FSJ_WORKSPACE')
+        arcpy.env.workspace = fsj_workspace
         arcpy.env.overwriteOutput = False
 
         # Check if there is a file path in Feature Layer
         if feature_layer_path:
             print(f"Processing feature layer: {feature_layer_path}")
+            logger.info(f"Processing feature layer: {feature_layer_path}")
 
         # Check to see if a file number was entered in the excel sheet, if so, use it to name the output directory and authorize the build_aoi_from_shp function to run
         file_number = job.get('file_number')
-        
+
         if not file_number:
             raise ValueError("Error: File Number is required if you are putting in a shapefile that has not been processed in the FW Setup Tool.")
         else:
             print(f"Running FW Setup on File Number: {file_number}")
-            
+            logger.info(f"Running FW Setup on File Number: {file_number}")
+
         # Convert file_number to string and make it uppercase
         file_number_str = str(file_number).upper()
-        
+
         # Calculate date variables
         date = datetime.date.today()
         year = str(date.year)
@@ -356,7 +426,7 @@ class AST_FACTORY:
         baseYear = os.path.join(base, year)
         outName = file_number_str
         geometry = "POLYGON"
-        template = r"\\spatialfiles.bcgov\Work\lwbc\nsr\Workarea\fcbc_fsj\Templates\BLANK_polygon.shp"
+    
         m = "SAME_AS_TEMPLATE"
         z = "SAME_AS_TEMPLATE"
         spatialReference = arcpy.Describe(template).spatialReference
@@ -366,14 +436,16 @@ class AST_FACTORY:
         # ===========================================================================
 
         print("Creating FW Setup folders . . .")
+        logger.info("Creating FW Setup folders . . .")
         outName = file_number_str
-        
+
         # Create path to folder location
         fileFolder = os.path.join(baseYear, outName)
         shapeFolder = fileFolder
         outPath = shapeFolder
         if os.path.exists(fileFolder):
             print(outName + " folder already exists.")
+            logger.info(outName + " folder already exists.")
         else:
             os.mkdir(fileFolder)
 
@@ -382,9 +454,12 @@ class AST_FACTORY:
         # ===========================================================================
 
         print("Creating Shapefiles using FW Setup . . .")
+        logger.info("Creating Shapefiles using FW Setup . . .")
         if os.path.isfile(os.path.join(outPath, outName + ".shp")):
             print(os.path.join(outPath, outName + ".shp") + " already exists")
+            logger.info(os.path.join(outPath, outName + ".shp") + " already exists")
             print("Exiting without creating files")
+            logger.info("Exiting without creating files")
             return os.path.join(outPath, outName + ".shp")
         else:
             # Creating template shapefile
@@ -392,6 +467,7 @@ class AST_FACTORY:
             # Append the newly created shapefile with area of interest
             append_shp = arcpy.management.Append(feature_layer_path, create_shp, "NO_TEST")
             print("Append Successful")
+            logger.info("Append Successful")
             # Making filename for kml
             create_kml = os.path.join(outPath, outName + ".kml")
             # Make layer for kml to be converted from 
@@ -400,24 +476,27 @@ class AST_FACTORY:
             arcpy.conversion.LayerToKML(layer_shp, create_kml)
             # Send message to user that kml has been created
             print("kml created: " + create_kml)
+            logger.info("kml created: " + create_kml)
 
             print(f"FW Setup complete, returned shapefile is {os.path.join(outPath, outName + '.shp')}")
+            logger.info(f"FW Setup complete, returned shapefile is {os.path.join(outPath, outName + '.shp')}")
             return os.path.join(outPath, outName + ".shp")
-
 
 if __name__ == '__main__':
     current_path = os.path.dirname(os.path.realpath(__file__))
-      
+    
     # Contains 2 jobs with raw shapefile, with file number
-    qf = os.path.join(current_path, '4_jobs_Sunny.xlsx')
+    qf = os.path.join(current_path, excel_file)
 
     ast = AST_FACTORY(qf, DB_USER, DB_PASS)
 
     if not os.path.exists(qf):
         print("Queuefile not found, creating new queuefile")
+        logger.info("Queuefile not found, creating new queuefile")
         ast.create_new_queuefile()
     jobs = ast.load_jobs()
     ast.batch_ast()
 
 
     print("AST Factory Complete")
+    logger.info("AST Factory Complete")
