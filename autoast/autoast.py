@@ -28,7 +28,7 @@ import datetime
 import logging
 
 ## *** INPUT YOUR EXCEL FILE NAME HERE ***
-excel_file = '4_jobs_Sunny.xlsx'
+excel_file = 'broken_job_Sunny.xlsx'
 
 
 
@@ -44,6 +44,8 @@ if not os.path.exists(log_folder):
 
 # Create the log file path with the date and time appended
 log_file = os.path.join(log_folder, f'ast_log_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
+
+
 
 # Set up logging config to DEBUG level
 logging.basicConfig(filename=log_file, 
@@ -238,8 +240,8 @@ class AST_FACTORY:
                             new_feature_layer_path = self.build_aoi_from_shp(job, feature_layer_path)
                             job['feature_layer'] = new_feature_layer_path
                         else:
-                            print(f'No FW File Number provided for the shapefile, using original shapefile path')
-                            logger.info(f'No FW File Number provided for the shapefile, using original shapefile path')
+                            print(f'No FW File Number provided for the shapefile, loading original shapefile path')
+                            logger.info(f'No FW File Number provided for the shapefile, loading original shapefile path')
                     else:
                         print(f"Unsupported feature layer format: {feature_layer_path}")
                         logger.warning(f"Unsupported feature layer format: {feature_layer_path}")
@@ -252,6 +254,10 @@ class AST_FACTORY:
         input_type = None
         file_name, extension = os.path.basename(input).split()
 
+
+            
+    
+    
     def start_ast_tb(self, jobs):
         '''Starts an AST toolbox from job params. It will check the capitalization of the True or False inputs and 
         change them to appropriate booleans as the script was failing before implementing this.
@@ -265,6 +271,12 @@ class AST_FACTORY:
             # Loop over the jobs in the spreadsheet
             for job in jobs:
                 params = []
+                
+                # Apply a separator line between each job in the log file
+                
+                logger.info(f"===================================================================")
+                logger.info(f"======================= Starting Job #: {job} ======================")
+                logger.info(f"====================================================================")
                 try:
                     # Convert 'true'/'false' strings to booleans (For some reason the script was reading them all as lowercase strings)
                     for param in self.AST_PARAMETERS.values():
@@ -302,11 +314,10 @@ class AST_FACTORY:
                     # Run the tool and send the result to "rslt"
                     print(f"Job Parameters are: {params}")
                     logger.info(f"Job Parameters are: {params}")
-                    rslt = arcpy.MakeAutomatedStatusSpreadsheet_ast(*params)
-
-                    #TODO change this print to logging
-                    print(f"Result: {rslt}")
-                    logger.info(f"Result: {rslt}")
+                    arcpy.MakeAutomatedStatusSpreadsheet_ast(*params)
+                    
+                    self.capture_arcpy_messages()
+                    
                 except KeyError as e:
                     print(f"Error: Missing parameter in the excel queuefile: {e}")
                     logger.error(f"Error: Missing parameter in the excel queuefile: {e}")
@@ -480,7 +491,23 @@ class AST_FACTORY:
 
             print(f"FW Setup complete, returned shapefile is {os.path.join(outPath, outName + '.shp')}")
             logger.info(f"FW Setup complete, returned shapefile is {os.path.join(outPath, outName + '.shp')}")
+
             return os.path.join(outPath, outName + ".shp")
+        
+
+    def capture_arcpy_messages(self):
+        ''' Re assigns the arcpy messages  (0 for all messages, 1 for warnings, and 2 for errors) to variables and passes them to the logger'''
+        
+        arcpy_messages = arcpy.GetMessages(0) # Gets all messages
+        arcpy_warnings = arcpy.GetMessages(1) # Gets all warnings only
+        arcpy_errors = arcpy.GetMessages(2) # Gets all errors only
+        
+        if arcpy_messages:
+            logger.info(f'ast_toobox arcpy messages: {arcpy_messages}')
+        if arcpy_warnings:
+            logger.warning(f'ast_toobox arcpy warnings: {arcpy_warnings}')
+        if arcpy_errors:
+            logger.error(f'ast_toobox arcpy errors: {arcpy_errors}')   
 
 if __name__ == '__main__':
     current_path = os.path.dirname(os.path.realpath(__file__))
