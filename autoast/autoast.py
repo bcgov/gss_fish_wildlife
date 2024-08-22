@@ -28,66 +28,73 @@ import datetime
 import logging
 
 ## *** INPUT YOUR EXCEL FILE NAME HERE ***
-excel_file = 'broken_job_Sunny.xlsx'
+excel_file = '1_quick_job.xlsx'
 
 
 
 ###############################################################################################################################################################################
 # Set up logging
 
-# Create the log folder filename
-log_folder = f'autoast_logs_{datetime.datetime.now().strftime("%Y%m%d")}'
+def setup_logging():
+    ''' Set up logging for the script '''
+    # Create the log folder filename
+    log_folder = f'autoast_logs_{datetime.datetime.now().strftime("%Y%m%d")}'
 
-# Create the log folder in the current directory if it doesnt exits
-if not os.path.exists(log_folder):
-    os.mkdir(log_folder)
+    # Create the log folder in the current directory if it doesnt exits
+    if not os.path.exists(log_folder):
+        os.mkdir(log_folder)
 
-# Create the log file path with the date and time appended
-log_file = os.path.join(log_folder, f'ast_log_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
+    # Create the log file path with the date and time appended
+    log_file = os.path.join(log_folder, f'ast_log_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
 
 
 
-# Set up logging config to DEBUG level
-logging.basicConfig(filename=log_file, 
-                    level=logging.DEBUG, 
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    # Set up logging config to DEBUG level
+    logging.basicConfig(filename=log_file, 
+                        level=logging.DEBUG, 
+                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-# Create the logger object and set to the current file name
-logger = logging.getLogger(__name__)
+    # Create the logger object and set to the current file name
+    logger = logging.getLogger(__name__)
 
-print("Logging set up")
-logger.info("Logging set up")
+    print("Logging set up")
+    logger.info("Logging set up")
 
-print("Starting Script")
-logger.info("Starting Script")
+    print("Starting Script")
+    logger.info("Starting Script")
+    
+    return logger
 ###############################################################################################################################################################################
 
-# Load the default environment
-load_dotenv()
 
-# Get the toolbox path from environment variables
-ast_toolbox = os.getenv('TOOLBOX') # File path 
 
-if ast_toolbox is None:
-    print("Unable to find the toolbox. Check the path in .env file")
-    logger.error("Unable to find the toolbox. Check the path in .env file")
-    exit() 
 
-# Import the toolbox
-try:
-    arcpy.ImportToolbox(ast_toolbox)
-    print(f"AST Toolbox imported successfully.")
-    logger.info(f"AST Toolbox imported successfully.")
-except Exception as e:
-    print(f"Error importing toolbox: {e}")
-    logger.error(f"Error importing toolbox: {e}")
-    exit()
+def import_ast():
+    # Get the toolbox path from environment variables
+    ast_toolbox = os.getenv('TOOLBOX') # File path 
 
-# Assign the shapefile template for FW Setup to a variable
-template = os.getenv('TEMPLATE') # File path in .env
-if template is None:
-    print("Unable to find the template. Check the path in .env file")
-    logger.error("Unable to find the template. Check the path in .env file")
+    if ast_toolbox is None:
+        print("Unable to find the toolbox. Check the path in .env file")
+        logger.error("Unable to find the toolbox. Check the path in .env file")
+        exit() 
+
+    # Import the toolbox
+    try:
+        arcpy.ImportToolbox(ast_toolbox)
+        print(f"AST Toolbox imported successfully.")
+        logger.info(f"AST Toolbox imported successfully.")
+    except Exception as e:
+        print(f"Error importing toolbox: {e}")
+        logger.error(f"Error importing toolbox: {e}")
+        exit()
+
+    # Assign the shapefile template for FW Setup to a variable
+    template = os.getenv('TEMPLATE') # File path in .env
+    if template is None:
+        print("Unable to find the template. Check the path in .env file")
+        logger.error("Unable to find the template. Check the path in .env file")
+        
+    return template
     
 
 ###############################################################################################################################################################################
@@ -95,66 +102,70 @@ if template is None:
 # Set up the database connection
 #
 ###############################################################################################################################################################################
+def setup_bcgw():
+    # Get the secret file containing the database credentials
+    SECRET_FILE = os.getenv('SECRET_FILE')
 
-# Get the secret file containing the database credentials
-SECRET_FILE = os.getenv('SECRET_FILE')
+    # If secret file found, load the secret file and display a print message, if not found display an error message
+    if SECRET_FILE:
+        load_dotenv(SECRET_FILE)
+        print(f"Secret file {SECRET_FILE} found")
+        logger.info(f"Secret file {SECRET_FILE} found")
+    else:
+        print("Secret file not found")
+        logger.error("Secret file not found")
 
-# If secret file found, load the secret file and display a print message, if not found display an error message
-if SECRET_FILE:
-    load_dotenv(SECRET_FILE)
-    print(f"Secret file {SECRET_FILE} found")
-    logger.info(f"Secret file {SECRET_FILE} found")
-else:
-    print("Secret file not found")
-    logger.error("Secret file not found")
+    # Assign secret file data to variables    
+    DB_USER = os.getenv('BCGW_USER')
+    DB_PASS = os.getenv('BCGW_PASS')
 
-# Assign secret file data to variables    
-DB_USER = os.getenv('BCGW_USER')
-DB_PASS = os.getenv('BCGW_PASS')
+    # If DB_USER and DB_PASS found display a print message, if not found display an error message
+    if DB_USER and DB_PASS:
+        print(f"Database user {DB_USER} and password found")
+        logger.info(f"Database user {DB_USER} and password found")
+    else:
+        print("Database user and password not found")
+        logger.error("Database user and password not found")
 
-# If DB_USER and DB_PASS found display a print message, if not found display an error message
-if DB_USER and DB_PASS:
-    print(f"Database user {DB_USER} and password found")
-    logger.info(f"Database user {DB_USER} and password found")
-else:
-    print("Database user and password not found")
-    logger.error("Database user and password not found")
+    # Define current path of the executing script
+    current_path = os.path.dirname(os.path.realpath(__file__))
 
-# Define current path of the executing script
-current_path = os.path.dirname(os.path.realpath(__file__))
+    # Create the connection folder
+    connection_folder = 'connection'
+    connection_folder = os.path.join(current_path, connection_folder)
 
-# Create the connection folder
-connection_folder = 'connection'
-connection_folder = os.path.join(current_path, connection_folder)
+    # Check for the existance of the connection folder and if it doesn't exist, print an error and create a new connection folder
+    if not os.path.exists(connection_folder):
+        print("Connection folder not found, creating new connection folder")
+        logger.info("Connection folder not found, creating new connection folder")
+        os.mkdir(connection_folder)
 
-# Check for the existance of the connection folder and if it doesn't exist, print an error and create a new connection folder
-if not os.path.exists(connection_folder):
-    print("Connection folder not found, creating new connection folder")
-    logger.info("Connection folder not found, creating new connection folder")
-    os.mkdir(connection_folder)
+    # Check for an existing bcgw connection, if there is one, remove it
+    if os.path.exists(os.path.join(connection_folder, 'bcgw.sde')):
+        os.remove(os.path.join(connection_folder, 'bcgw.sde'))
 
-# Check for an existing bcgw connection, if there is one, remove it
-if os.path.exists(os.path.join(connection_folder, 'bcgw.sde')):
-    os.remove(os.path.join(connection_folder, 'bcgw.sde'))
+    # Create a bcgw connection
+    bcgw_con = arcpy.management.CreateDatabaseConnection(connection_folder,
+                                                        'bcgw.sde',
+                                                        'ORACLE',
+                                                        'bcgw.bcgov/idwprod1.bcgov',
+                                                        'DATABASE_AUTH',
+                                                        DB_USER,
+                                                        DB_PASS,
+                                                        'DO_NOT_SAVE_USERNAME')
 
-# Create a bcgw connection
-bcgw_con = arcpy.management.CreateDatabaseConnection(connection_folder,
-                                                    'bcgw.sde',
-                                                    'ORACLE',
-                                                    'bcgw.bcgov/idwprod1.bcgov',
-                                                    'DATABASE_AUTH',
-                                                    DB_USER,
-                                                    DB_PASS,
-                                                    'DO_NOT_SAVE_USERNAME')
-
-print("new db connection created")
-logger.info("new db connection created")
+    print("new db connection created")
+    logger.info("new db connection created")
 
 
-arcpy.env.workspace = bcgw_con.getOutput(0)
+    arcpy.env.workspace = bcgw_con.getOutput(0)
 
-print("workspace set to bcgw connection")
-logger.info("workspace set to bcgw connection")
+    print("workspace set to bcgw connection")
+    logger.info("workspace set to bcgw connection")
+    
+    secrets = [DB_USER, DB_PASS]
+    
+    return secrets
 ###############################################################################################################################################################################
 
 class AST_FACTORY:
@@ -285,28 +296,6 @@ class AST_FACTORY:
                             value = True if value.lower() == 'true' else False
                         params.append(value)
 
-                    # # Ensure output_directory is set correctly
-                    # output_directory = job.get('output_directory')
-
-                    # # Create a folder path on the T:\ drive (to be changed later) if one doesn't exist
-                    # if not output_directory:
-                    #     # In case the user didn't fill in an output path on the excel sheet.
-                    #     # Arcpy will throw an error but the folder will still be created and the job still runs
-
-                    #     #TODO need to update from the T:\ drive to the server
-                    #     job_number = jobs.index(job) + 1
-                    #     output_directory = os.path.join('T:', f'job{job_number}')
-                    #     job['output_directory'] = output_directory
-
-                    # # Create the output directory if it does not exist
-                    # if not os.path.exists(output_directory):
-                    #     try:
-                    #         os.makedirs(output_directory)
-                    #         print(f"Output directory '{output_directory}' created.")
-                    #         logging.info(f"Output directory '{output_directory}' created.")
-                    #     except OSError as e:
-                    #         raise RuntimeError(f"Failed to create the output directory. Check your permissions '{output_directory}': {e}")
-
                     # Ensure that region has been entered otherwise job will fail
                     if not job.get('region'):
                         raise ValueError("Region is required and was not provided.")
@@ -346,15 +335,24 @@ class AST_FACTORY:
         print("Batching AST")
         logger.info("Batching AST")
         counter = 1
+        
+        # iterate through the jobs and run the start_ast_tb function on each row of the excel sheet
         for job in self.jobs:
-            self.start_ast_tb([job])
-            print(f"Job {counter} Complete")
-            logger.info(f"Job {counter} Complete")
-            counter += 1
+            try:
+                self.start_ast_tb([job])
+                print(f"Job {counter} Complete")
+                logger.info(f"Job {counter} Complete")
+
+            except Exception as e:
+                # Log the exception and the job that caused it
+                print(f"Error encountered with job {counter}: {e}")
+                logger.error(f"Error encountered with job {counter}: {e}")
+            finally:
+                counter += 1
 
     def add_job_result(self, job):
         ''' adds result information to job'''
-        # TODO: Create a routine to add status/results to job
+        # TODO: Create a routine to add status/results to job  #Jared
         pass
 
     def create_new_queuefile(self):
@@ -512,16 +510,33 @@ class AST_FACTORY:
 if __name__ == '__main__':
     current_path = os.path.dirname(os.path.realpath(__file__))
     
-    # Contains 2 jobs with raw shapefile, with file number
+    # Call the setup_logging function to log the messages
+    logger = setup_logging()
+    
+    # Load the default environment
+    load_dotenv()
+    
+    # Call the import_ast function to import the AST toolbox
+    template = import_ast()
+    
+    # Call the setup_bcgw function to set up the database connection
+    secrets = setup_bcgw()
+    
+    # Create the path for the queuefile
     qf = os.path.join(current_path, excel_file)
 
-    ast = AST_FACTORY(qf, DB_USER, DB_PASS)
+    # Create and instance of the Ast Factory class, assign the quefile path and the bcgw username and passwords to the instance
+    ast = AST_FACTORY(qf, secrets[0], secrets[1])
 
     if not os.path.exists(qf):
         print("Queuefile not found, creating new queuefile")
         logger.info("Queuefile not found, creating new queuefile")
         ast.create_new_queuefile()
+        
+    # load the jobs using the load jobs method. This will scan the excel sheet and assign to "jobs"    
     jobs = ast.load_jobs()
+    
+
     ast.batch_ast()
 
 
