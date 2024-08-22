@@ -28,7 +28,7 @@ import datetime
 import logging
 
 ## *** INPUT YOUR EXCEL FILE NAME HERE ***
-excel_file = '1_quick_job.xlsx'
+excel_file = '2_quick_jobs.xlsx'
 
 
 
@@ -216,8 +216,10 @@ class AST_FACTORY:
                 job_condition = None
                 for k, v in zip(header, d):
                     if k is not None and k.lower() == self.AST_CONDITION_COLUMN.lower():
+                        # If the value is not None, assign it to job_condition 
                         if v is not None:
                             job_condition = v
+                        #if it is None, assign an empty string to job_condition
                         elif v is None:
                             job_condition = ""
                             v = ""
@@ -300,12 +302,18 @@ class AST_FACTORY:
                     if not job.get('region'):
                         raise ValueError("Region is required and was not provided.")
 
-                    # Run the tool and send the result to "rslt"
+                    # Run the ast tool 
                     print(f"Job Parameters are: {params}")
                     logger.info(f"Job Parameters are: {params}")
                     arcpy.MakeAutomatedStatusSpreadsheet_ast(*params)
                     
                     self.capture_arcpy_messages()
+                    
+                    #TODO
+                    #Update the ast_condition column in the excel sheet to 'Complete'
+                    # After Jared has completed the function add some sort of job index, 
+                    # so it marks the result for each job
+                    self.add_job_result(job)
                     
                 except KeyError as e:
                     print(f"Error: Missing parameter in the excel queuefile: {e}")
@@ -351,8 +359,10 @@ class AST_FACTORY:
                 counter += 1
 
     def add_job_result(self, job):
-        ''' adds result information to job'''
+        ''' Jared to complete this.
+        Function adds result information to job'''
         # TODO: Create a routine to add status/results to job  #Jared
+ 
         pass
 
     def create_new_queuefile(self):
