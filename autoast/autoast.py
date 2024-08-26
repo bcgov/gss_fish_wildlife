@@ -233,40 +233,51 @@ class AST_FACTORY:
 
                 if job_condition and job_condition.upper() != 'Complete':
                     self.jobs.append(job)
+                
+                # Call the classify_input_type function to process the input depending if it is .kml or .shp    
+                self.classify_input_type(job)
 
-                # Check if there is a file path in Feature Layer
-                if job.get('feature_layer'):
-                    print(f'Feature layer found: {job["feature_layer"]}')
-                    logger.info(f'Feature layer found: {job["feature_layer"]}')
-                    feature_layer_path = job['feature_layer']
-                    print(f"Processing feature layer: {feature_layer_path}")
-                    logger.info(f"Processing feature layer: {feature_layer_path}")
 
-                    if feature_layer_path.lower().endswith('.kml'):
-                        print(f'Kml found, building AOI from KML')
-                        logger.info(f'Kml found, building AOI from KML')
-                        job['feature_layer'] = self.build_aoi_from_kml(feature_layer_path)
-                    elif feature_layer_path.lower().endswith('.shp'):
-                        if job.get('file_number'):
-                            print(f"File number found, running FW setup on shapefile: {feature_layer_path}")
-                            logger.info(f"File number found, running FW setup on shapefile: {feature_layer_path}")
-                            new_feature_layer_path = self.build_aoi_from_shp(job, feature_layer_path)
-                            job['feature_layer'] = new_feature_layer_path
-                        else:
-                            print(f'No FW File Number provided for the shapefile, loading original shapefile path')
-                            logger.info(f'No FW File Number provided for the shapefile, loading original shapefile path')
-                    else:
-                        print(f"Unsupported feature layer format: {feature_layer_path}")
-                        logger.warning(f"Unsupported feature layer format: {feature_layer_path}")
 
-            return self.jobs
+            return self.jobs, job
 
     def classify_input_type(self, input):
+        ''' If the input file is a .kml it will build the aoi from the kml.
+        If it is a .shp it will build the aoi based on the shapefile.
+        If it is a shapefile AND a filenumber is present, it will run the FW setup script on the shapefile, writing the appended 
+        shapefile to an output directory based on the file numer. This step of writing the appended shapefile to an output directory
+        might be able to be removed'''
+        
         print("Classifying input type")
         logger.info("Classifying input type")
-        input_type = None
-        file_name, extension = os.path.basename(input).split()
+        # input_type = None
+        # file_name, extension = os.path.basename(input).split()
 
+        
+        for job in self.jobs:                # Check if there is a file path in Feature Layer
+            if job.get('feature_layer'):
+                print(f'Feature layer found: {job["feature_layer"]}')
+                logger.info(f'Feature layer found: {job["feature_layer"]}')
+                feature_layer_path = job['feature_layer']
+                print(f"Processing feature layer: {feature_layer_path}")
+                logger.info(f"Processing feature layer: {feature_layer_path}")
+
+                if feature_layer_path.lower().endswith('.kml'):
+                    print(f'Kml found, building AOI from KML')
+                    logger.info(f'Kml found, building AOI from KML')
+                    job['feature_layer'] = self.build_aoi_from_kml(feature_layer_path)
+                elif feature_layer_path.lower().endswith('.shp'):
+                    if job.get('file_number'):
+                        print(f"File number found, running FW setup on shapefile: {feature_layer_path}")
+                        logger.info(f"File number found, running FW setup on shapefile: {feature_layer_path}")
+                        new_feature_layer_path = self.build_aoi_from_shp(job, feature_layer_path)
+                        job['feature_layer'] = new_feature_layer_path
+                    else:
+                        print(f'No FW File Number provided for the shapefile, loading original shapefile path')
+                        logger.info(f'No FW File Number provided for the shapefile, loading original shapefile path')
+                else:
+                    print(f"Unsupported feature layer format: {feature_layer_path}")
+                    logger.warning(f"Unsupported feature layer format: {feature_layer_path}")
 
             
     
@@ -359,10 +370,13 @@ class AST_FACTORY:
             finally:
                 counter += 1
 
-    def add_job_result(self, job):
+    def add_job_result(self):
         ''' Jared to complete this.
-        Function adds result information to job. If the job result is successful, it will update the ast_condition column to "Complete",
-        if the job result is failed, it will update the ast_condition column to "Failed" '''
+        Function adds result information to the excel spreadsheet. If the job result is successful, it will update the ast_condition column to "Complete",
+        if the job failed, it will update the ast_condition column to "Failed" '''
+        
+        
+        
         # TODO: Create a routine to add status/results to job  #Jared
  
         pass
