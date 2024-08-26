@@ -310,7 +310,7 @@ class AST_FACTORY:
                     self.capture_arcpy_messages()
                     
                     #TODO
-                    #Update the ast_condition column in the excel sheet to 'Complete'
+                    #Update the ast_condition column in the excel sheet to 'Complete' or Failed
                     # After Jared has completed the function add some sort of job index, 
                     # so it marks the result for each job
                     self.add_job_result(job)
@@ -339,6 +339,7 @@ class AST_FACTORY:
             logger.error(f"Unexpected error: {e}")
 
     def batch_ast(self):
+        global counter
         ''' Executes the loaded jobs'''
         print("Batching AST")
         logger.info("Batching AST")
@@ -360,10 +361,30 @@ class AST_FACTORY:
 
     def add_job_result(self, job):
         ''' Jared to complete this.
-        Function adds result information to job'''
+        Function adds result information to job. If the job result is successful, it will update the ast_condition column to "Complete",
+        if the job result is failed, it will update the ast_condition column to "Failed" '''
         # TODO: Create a routine to add status/results to job  #Jared
  
         pass
+    
+    def rerun_failed_jobs(self):
+        '''After all jobs have run, this function will scan the excel sheet job result for jobs entered as "failed", 
+        if a job is found as failed it will change 'dont_overwrite_outputs' and rerun the job'''
+        
+        # iterate through the excel sheet of jobs and look for "failed" jobs in the ast_condition column, if the job condition is failed,
+        # change the 'dont_overwrite_outputs' to True and rerun the job
+        for job in self.jobs:
+            # Check the ast_condition column for failed jobs
+            if job.get('ast_condition') == 'Failed':
+                
+                # If the job is failed, change the 'dont_overwrite_outputs' to True and rerun the job
+                job['dont_overwrite_outputs'] = True
+                
+                # Rerun the job
+                self.start_ast_tb([job])
+                print(f"Job # {counter} rerun")
+                logger.info(f"Job # {counter}/ {job} rerun")
+
 
     def create_new_queuefile(self):
         '''write a new queuefile with preset header'''
