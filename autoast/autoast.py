@@ -211,27 +211,49 @@ class AST_FACTORY:
             ws = wb[self.XLSX_SHEET_NAME]
             header = list([row for row in ws.iter_rows(min_row=1, max_col=None, values_only=True)][0])
             data = [row for row in ws.iter_rows(min_row=2, max_col=None, values_only=True)]
-            for d in data:
+            
+            # For each row, an empty dictionary job is initialized to store the job's parameters, and job_condition is initialized to None
+            # The function loops over each header-value pair (k, v) for the current row and assigns the value to the job dictionary
+            for row_data in data:
                 job = dict()
-                job_condition = None
-                for k, v in zip(header, d):
-                    if k is not None and k.lower() == self.AST_CONDITION_COLUMN.lower():
-                        # If the value is not None, assign it to job_condition 
-                        if v is not None:
-                            job_condition = v
-                        #if it is None, assign an empty string to job_condition
-                        elif v is None:
-                            job_condition = ""
-                            v = ""
-                        else:
-                            job_condition = 'Queued'
-                    else:
-                        if v is None:
-                            v = ""
-                    if k is not None:
-                        job[k] = v
+                ast_condition = None
 
-                if job_condition and job_condition.upper() != 'Complete':
+                for key, value in zip(header, row_data):
+                    # If the header (key) matches the condition column (ast_condition), the corresponding value (data) is checked:
+                    if key is not None and key.lower() == self.AST_CONDITION_COLUMN.lower():
+                        # If the value is not None, assign it to ast_condition 
+                        if value is not None:
+                            ast_condition = value
+                            #DELETE
+                            print(f"AST Condition in load jobs is: {ast_condition}")
+                            logger.info("************************************************************************************************")
+                            logger.info(f"AST Condition in load jobs is: {ast_condition}")
+                            logger.info("************************************************************************************************")
+                        #if it is None, assign an empty string to ast_condition
+                        elif value is None:
+                            ast_condition = ""
+                            value = ""
+                            #DELETE
+                            print(f"AST Condition in load jobs is: Blank {ast_condition}")
+                            logger.info("************************************************************************************************")
+                            logger.info(f"AST Condition in load jobs is: Blank {ast_condition}")
+                            logger.info("************************************************************************************************")
+                        else:
+                            ast_condition = 'Queued'
+                            #DELETE
+                            print(f"AST Condition in load jobs is: {ast_condition}")
+                            logger.info("************************************************************************************************")
+                            logger.info(f"AST Condition in load jobs is: {ast_condition}")
+                            logger.info("************************************************************************************************")
+                    else:
+                        # If any field is empty, assign an empty string to the value
+                        if value is None:
+                            value = ""
+                    # If key (header) is not None, assign the value to the job dictionary
+                    if key is not None:
+                        job[key] = value
+
+                if ast_condition and ast_condition.upper() != 'Complete':
                     self.jobs.append(job)
                 
                 # Call the classify_input_type function to process the input depending if it is .kml or .shp    
@@ -283,6 +305,7 @@ class AST_FACTORY:
     
     
     def start_ast_tb(self, jobs):
+        global job_index
         '''Starts an AST toolbox from job params. It will check the capitalization of the True or False inputs and 
         change them to appropriate booleans as the script was failing before implementing this.
         It will also create the output directory if it does not exist based on the job number. Currently this is being created in the T: drive.
@@ -324,7 +347,12 @@ class AST_FACTORY:
                     #Update the ast_condition column in the excel sheet to 'Complete' or Failed
                     # After Jared has completed the function add some sort of job index, 
                     # so it marks the result for each job
+                    job_index = self.jobs.index(job)
+                    TODO
+                    #self.add_job_result(job_index, 'COMPLETE')
                     self.add_job_result(job)
+                    
+                    return job_index
                     
                 except KeyError as e:
                     print(f"Error: Missing parameter in the excel queuefile: {e}")
@@ -367,19 +395,34 @@ class AST_FACTORY:
                 # Log the exception and the job that caused it
                 print(f"Error encountered with job {counter}: {e}")
                 logger.error(f"Error encountered with job {counter}: {e}")
+                #self.add_job_result(job_index, 'Failed')
             finally:
                 counter += 1
 
-    def add_job_result(self):
+    def add_job_result(self, job_index, condition):
         ''' Jared to complete this.
         Function adds result information to the excel spreadsheet. If the job result is successful, it will update the ast_condition column to "Complete",
         if the job failed, it will update the ast_condition column to "Failed" '''
         
         
-        
         # TODO: Create a routine to add status/results to job  #Jared
- 
-        pass
+        # load the workbook
+        wb = load_workbook(filename=self.queuefile)
+        # Load the correct worksheet
+        ws = wb[self.XLSX_SHEET_NAME]
+        
+        # Read the header index for the ast_condition column
+        header = list([row for row in ws.iter_rows(min_row=1, max_col=None, values_only=True)][0])
+        ast_condition_index = header.index(self.AST_CONDITION_COLUMN) + 1 # +1 because Excel columns are 1-indexed
+        
+        
+        # Update the condition for the specific job (job_index corresponds to the row number)
+        ws.cell(row=job_index + 2, column=ast_condition_index, value=condition)  # +2 to account for header and 0-index
+
+        # Save the workbook with the updated condition
+        wb.save(self.queuefile)
+        
+        
     
     def rerun_failed_jobs(self):
         '''After all jobs have run, this function will scan the excel sheet job result for jobs entered as "failed", 
