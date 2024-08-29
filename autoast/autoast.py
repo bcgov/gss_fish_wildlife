@@ -15,15 +15,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+'''
+Job 1 Complete
+Starting job 2
+Starting AST Toolbox
+Job Parameters are: ['Northeast', '\\\\spatialfiles\\work\\lwbc\\nsr\\Workarea\\fcbc_fsj\\Wildlife\\2024\\876367\\876367.shp', '', '', '', '', True, False, False, True, False, True, 'Queu
+ed']
+Arcpy error: ERROR 000622: Failed to execute (Automated Status Tool). Parameters are not valid.
+ERROR 000628: Cannot set input into parameter DO_NOT_USE_Debug.'''
+
+
+
+
 
 import os
 import shutil
 from openpyxl import Workbook, load_workbook
 from dotenv import load_dotenv
-
 import geopandas
 import arcpy
-
 import datetime
 import logging
 
@@ -184,10 +194,11 @@ class AST_FACTORY:
         9: 'suppress_map_creation',
         10: 'add_maps_to_current',
         11: 'run_as_fcbc',
-        12: 'ast_condition'
+
     }
     
     ADDITIONAL_PARAMETERS = {
+        12: 'ast_condition',
         13: 'file_number'
     }
     
@@ -203,97 +214,102 @@ class AST_FACTORY:
 
     def load_jobs(self):
         global job_index
-        
-        '''loads jobs from the jobqueue to a dictionary'''
+
         print("Loading jobs")
         logger.info("Loading jobs")
+
+        # Initialize the jobs list to store jobs
         self.jobs = []
-        assert os.path.exists(self.queuefile)
+        
+        # Check if the queue file exists
+        assert os.path.exists(self.queuefile), "Queue file does not exist"
         if os.path.exists(self.queuefile):
-            wb = load_workbook(filename=self.queuefile)
-            ws = wb[self.XLSX_SHEET_NAME]
-            header = list([row for row in ws.iter_rows(min_row=1, max_col=None, values_only=True)][0])
-            data = [row for row in ws.iter_rows(min_row=2, max_col=None, values_only=True)]
-            
-            # For each row, an empty dictionary job is initialized to store the job's parameters, and job_condition is initialized to None
-            # The function loops over each header-value pair (k, v) for the current row and assigns the value to the job dictionary
-            for row_data in data:
+        
+            try:
+                # Open the Excel workbook and select the correct sheet
+                wb = load_workbook(filename=self.queuefile)
+                ws = wb[self.XLSX_SHEET_NAME]
                 
-                # Skip any blank rows when loading jobs
-                if all(value == '' or value is None for value in row_data):
-                    print("Skipping blank row")
-                    logger.info("Skipping blank row")
-                    #self.add_job_result(job_index, "Failed")
-                    # print("Updated job condition to 'Failed'")
-                    # logger.info("Updated job condition to 'Failed'")
-                    continue
+                # Get the header (column names) from the first row of the sheet
+                header = list([row for row in ws.iter_rows(min_row=1, max_col=None, values_only=True)][0])
                 
-                job = dict()
-                ast_condition = None
+                # Read all the data rows (starting from the second row to skip the header)
+                data = [row for row in ws.iter_rows(min_row=2, max_col=None, values_only=True)]
 
-                for key, value in zip(header, row_data):
-                    
-                    if key is not None and key.lower() == self.AST_CONDITION_COLUMN.lower():
-                        # If the value is not None, assign it to ast_condition 
-                        if value is not None:
-                            ast_condition = value
-                            #DELETE
-                            print(f"AST Condition value (is not None) in load jobs is: {ast_condition}")
-                            logger.info("************************************************************************************************")
-                            logger.info(f"AST Condition  value (is not None) in load jobs is: {ast_condition}")
-                            logger.info("************************************************************************************************")
-                        #if it is None, assign an empty string to ast_condition
-                        elif value is None:
-                            ast_condition = ""
-                            value = ""
-                            #DELETE
-                            print(f"AST Condition in load jobs is: None/Blank. Assigning Empty String {ast_condition}")
-                            logger.info("************************************************************************************************")
-                            logger.info(f"AST Condition in load jobs is: Assigning Empty String {ast_condition}")
-                            logger.info("************************************************************************************************")
+                # Iterate over each row of data; enumerate to keep track of the row number in Excel
+                for row_index, row_data in enumerate(data, start=2):  # Start from 2 to account for Excel header
+
+                    # Skip any completely blank rows
+                    if all(value == '' or value is None for value in row_data):
+                        print(f"Skipping blank row at index {row_index}")
+                        logger.info(f"Skipping blank row at index {row_index}")
+                        continue
+
+                    # Initialize a dictionary to store the job's parameters
+                    job = {}
+                    ast_condition = None  # Initialize the ast_condition for the current row
+
+                    # Loop through each column header and corresponding value in the current row
+                    for key, value in zip(header, row_data):
+                        # Check if the key corresponds to the ast_condition column
+                        if key is not None and key.lower() == self.AST_CONDITION_COLUMN.lower():
+                            if value is not None:
+                                # If the value exists, assign it to ast_condition
+                                ast_condition = value
+                            else:
+                                # If the value is None, assign an empty string
+                                ast_condition = ""
+                                value = ""
                         else:
-                            ast_condition = 'Queued'
-                            #DELETE
-                            print(f"AST Condition in load jobs is Queued: {ast_condition}")
-                            logger.info("************************************************************************************************")
-                            logger.info(f"AST Condition in load jobs is Queued: {ast_condition}")
-                            logger.info("************************************************************************************************")
-                    else:
-                        # If any field is empty, assign an empty string to the value
-                        if value is None:
-                            value = ""
-                            # print(f"Value is None, assigning empty string to value: {value}")
-                            # logger.info(f"Value is None, assigning empty string to value: {value}")
-                    # If key (header) is not None, assign the value to the job dictionary
-                    if key is not None:
-                        job[key] = value
-                        # print(f"Job key is not None, Key is: {key} value: {value}")
-                        # logger.info(f"Job key is not None, Key is: {key} value: {value}")
-                
-                # If ast_condition is None, Empty or anything but Complete, assign queued to ast_condition and add the job to the jobs list
-                if ast_condition is None or ast_condition.strip() == '' or ast_condition.upper() != 'Complete':
-                    # Add "Queued" to the ast_condition column
-                    # for j in self.jobs:
-                    #     job_index = self.jobs.index(j)
-                    #     print(f"Inside IF ast Condition != complete Job index is: {job_index}")
-                        
-                    #     self.add_job_result(job_index, 'Queued')
+                            # Assign an empty string to any None values
+                            if value is None:
+                                value = ""
 
-                        self.jobs.append(job)
-                        #TODO fix the job index 
-                        # print(f"Job Condition is not complete, adding job: {job_index} to jobs list")
-                        # logger.info(f"Job Condition is not complete, adding job: {job_index} to jobs list")
-                        print(f"Job dictionary is {job}")
-                        logger.info(f"Job dictionary is {job}")
-                
-                # Call the classify_input_type function to process the input depending if it is .kml or .shp    
-                print("Classifying input type")
-                logger.info("Classifying input type")
-                self.classify_input_type(job)
+                        # Assign the value to the job dictionary if the key is not None
+                        if key is not None:
+                            job[key] = value
 
+                    # Check if the ast_condition is None, empty, or not 'Complete'
+                    if ast_condition is None or ast_condition.strip() == '' or ast_condition.upper() != 'COMPLETE':
+                        # Assign 'Queued' to the ast_condition and update the job dictionary
+                        ast_condition = 'Queued'
+                        job[self.AST_CONDITION_COLUMN] = ast_condition
 
+                        # Immediately update the Excel sheet with the new condition
+                        try:
+                            self.add_job_result(row_index - 2, ast_condition)  
+                        except Exception as e:
+                            print(f"Error updating Excel sheet at row {row_index}: {e}")
+                            logger.error(f"Error updating Excel sheet at row {row_index}: {e}")
+                            continue  
 
-            return self.jobs, job
+                    # Add the job to the jobs list
+                    self.jobs.append(job)
+                    print(f"Job Condition is not 'Complete', adding job: {row_index} to jobs list")
+                    logger.info(f"Job Condition is not 'Complete', adding job: {row_index} to jobs list")
+
+                    print(f"Job dictionary is {job}")
+                    logger.info(f"Job dictionary is {job}")
+
+                # Classify input types for all loaded jobs
+                print("Classifying input types")
+                logger.info("Classifying input types")
+                for job in self.jobs:
+                    try:
+                        self.classify_input_type(job)
+                    except Exception as e:
+                        print(f"Error classifying input type for job {job}: {e}")
+                        logger.error(f"Error classifying input type for job {job}: {e}")
+
+            except FileNotFoundError as e:
+                print(f"Error: Queue file not found - {e}")
+                logger.error(f"Error: Queue file not found - {e}")
+            except Exception as e:
+                print(f"Unexpected error loading jobs: {e}")
+                logger.error(f"Unexpected error loading jobs: {e}")
+
+            return self.jobs
+
 
     def classify_input_type(self, input):
         ''' If the input file is a .kml it will build the aoi from the kml.
