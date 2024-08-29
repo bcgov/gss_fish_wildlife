@@ -548,7 +548,6 @@ if __name__ == '__main__':
     
 
     ast.batch_ast()
-
-
+#tell users the status has been status-ed
     print("AST Factory Complete")
     logger.info("AST Factory Complete")
