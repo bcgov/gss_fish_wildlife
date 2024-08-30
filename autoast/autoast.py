@@ -38,7 +38,7 @@ import datetime
 import logging
 
 ## *** INPUT YOUR EXCEL FILE NAME HERE ***
-excel_file = '2_quick_jobs.xlsx'
+excel_file = '4_jobs_sunny.xlsx'
 
 
 
@@ -479,7 +479,7 @@ class AST_FACTORY:
 
 
     def batch_ast(self):
-        global counter
+        global counter, job_index 
         ''' Executes the loaded jobs'''
 
         counter = 1
@@ -506,33 +506,166 @@ class AST_FACTORY:
                 # Log the exception and the job that caused it
                 print(f"Error encountered with job {counter}: {e}")
                 logger.error(f"Error encountered with job {counter}: {e}")
-                #self.add_job_result(job_index, 'Failed')
+                self.add_job_result(job_index, 'Failed')
             finally:
                 counter += 1
 
     
+         
             
-            
-    
-    def rerun_failed_jobs(self):
-        '''After all jobs have run, this function will scan the excel sheet job result for jobs entered as "failed", 
-        if a job is found as failed it will change 'dont_overwrite_outputs' and rerun the job'''
+    def re_batch_failed_ast(self):
+        global counter
+        ''' Executes the loaded failed jobs'''
+
+        counter = 1
+        print("Re Batching AST")
         
-        # iterate through the excel sheet of jobs and look for "failed" jobs in the ast_condition column, if the job condition is failed,
-        # change the 'dont_overwrite_outputs' to True and rerun the job
+        logger.info("***************************************************************************************************************************")
+        logger.info("Re Batching Failed AST")        
+        logger.info("***************************************************************************************************************************")
+        print(f"Number of failed jobs: {len(self.jobs)}")
+        logger.info(f"Number of failed jobs: {len(self.jobs)}")
+        
+        # iterate through the jobs and run the start_ast_tb function on each row of the excel sheet
         for job in self.jobs:
-            # Check the ast_condition column for failed jobs
-            if job.get('ast_condition') == 'Failed':
+            try:
+                print(f"Starting job {counter}")
+                logger.info(f"Starting job {counter}")
                 
-                # If the job is failed, change the 'dont_overwrite_outputs' to True and rerun the job
-                job['dont_overwrite_outputs'] = True
-                
-                # Rerun the job
+                # Start the Ast Tool
                 self.start_ast_tb([job])
-                print(f"Job # {counter} rerun")
-                logger.info(f"Job # {counter}/ {job} rerun")
+                print(f"Job {counter} Complete")
+                logger.info(f"Job {counter} Complete")
+
+            except Exception as e:
+                # Log the exception and the job that caused it
+                print(f"Error encountered with job {counter}: {e}")
+                logger.error(f"Error encountered with job {counter}: {e}")
+                #self.add_job_result(job_index, 'Failed')
+            finally:
+                counter += 1
+    
+    # def rerun_failed_jobs(self):
+    #     '''After all jobs have run, this function will scan the excel sheet job result for jobs entered as "failed", 
+    #     if a job is found as failed it will change 'dont_overwrite_outputs' and rerun the job'''
+        
+    #     # iterate through the excel sheet of jobs and look for "failed" jobs in the ast_condition column, if the job condition is failed,
+    #     # change the 'dont_overwrite_outputs' to True and rerun the job
+    #     for job in self.jobs:
+    #         # Check the ast_condition column for failed jobs
+    #         if job.get('ast_condition') == 'Failed':
+                
+    #             # If the job is failed, change the 'dont_overwrite_outputs' to True and rerun the job
+    #             job['dont_overwrite_outputs'] = True
+                
+    #             # Rerun the job
+    #             self.start_ast_tb([job])
+    #             print(f"Job # {counter} rerun")
+    #             logger.info(f"Job # {counter}/ {job} rerun")
+
+    def re_load_failed_jobs(self):
+        
+
+        global job_index
+
+        print("Loading Failed jobs")
+        logger.info("Loading Failed jobs")
+
+        # Initialize the jobs list to store jobs
+        self.jobs = []
+        
+
+        
+        try:
+            # Open the Excel workbook and select the correct sheet
+            wb = load_workbook(filename=self.queuefile)
+            ws = wb[self.XLSX_SHEET_NAME]
+            
+            # Get the header (column names) from the first row of the sheet
+            header = list([row for row in ws.iter_rows(min_row=1, max_col=None, values_only=True)][0])
+            
+            # Read all the data rows (starting from the second row to skip the header)
+            data = [row for row in ws.iter_rows(min_row=2, max_col=None, values_only=True)]
+
+            # Iterate over each row of data; enumerate to keep track of the row number in Excel
+            for row_index, row_data in enumerate(data, start=2):  # Start from 2 to account for Excel header
+
+                # Skip any completely blank rows
+                if all(value == '' or value is None for value in row_data):
+                    print(f"Skipping blank row at index {row_index}")
+                    logger.info(f"Skipping blank row at index {row_index}")
+                    continue
+
+                # Initialize a dictionary to store the job's parameters
+                job = {}
+                ast_condition = None  # Initialize the ast_condition for the current row
+
+                # Loop through each column header and corresponding value in the current row
+                for key, value in zip(header, row_data):
+                    # Check if the key corresponds to the ast_condition column
+                    if key is not None and key.lower() == self.AST_CONDITION_COLUMN.lower():
+                        if value == 'Failed':
+                            # If the value exists, assign it to ast_condition
+                            ast_condition = value
+                            job[key] = value
 
 
+                    # Assign the value to the job dictionary if the key is not None
+                    # if key is not None:
+                    #     print(f"Re running job value is {value}")
+                    #     logger.info(f"Re running job value is {value}")
+                    #     job[key] = value
+
+                # Check if the ast_condition is None, empty, or not 'Complete'
+                if ast_condition is value:
+                    # Assign 'Queued' to the ast_condition and update the job dictionary
+                    ast_condition = 'Failed job Queued'
+                    job[self.AST_CONDITION_COLUMN] = ast_condition
+
+                    # Immediately update the Excel sheet with the new condition
+                    try:
+                        self.add_job_result(row_index - 2, ast_condition)  
+                    except Exception as e:
+                        print(f"Error updating Excel sheet at row {row_index}: {e}")
+                        logger.error(f"Error updating Excel sheet at row {row_index}: {e}")
+                        continue
+                    
+                # Immediately update the Excel sheet with the new condition
+                    try:
+                        self.add_job_result(row_index - 2, ast_condition)  
+                    except Exception as e:
+                        print(f"Error updating Excel sheet at row {row_index}: {e}")
+                        logger.error(f"Error updating Excel sheet at row {row_index}: {e}")
+                        continue  
+
+                # Add the job to the jobs list
+                self.jobs.append(job)
+                print(f"Job Condition is Failed Job Queued', adding job: {row_index} to jobs list")
+                logger.info(f"Job Condition is not 'Failed Job Queued', adding job: {row_index} to jobs list")
+
+                print(f"Job dictionary is {job}")
+                logger.info(f"Job dictionary is {job}")
+
+            # Classify input types for all loaded jobs
+            print("Classifying input types for failed jobs")
+            logger.info("Classifying input types for failed jobs")
+            for job in self.jobs:
+                try:
+                    self.classify_input_type(job)
+                except Exception as e:
+                    print(f"Error classifying input type for faiiled job {job}: {e}")
+                    logger.error(f"Error classifying input type for failed job {job}: {e}")
+
+        except FileNotFoundError as e:
+            print(f"Error: Queue file not found - {e}")
+            logger.error(f"Error: Queue file not found - {e}")
+        except Exception as e:
+            print(f"Unexpected error loading jobs: {e}")
+            logger.error(f"Unexpected error loading jobs: {e}")
+
+        return self.jobs
+
+        
     def create_new_queuefile(self):
         '''write a new queuefile with preset header'''
         print("Creating new queuefile")
@@ -719,6 +852,10 @@ if __name__ == '__main__':
     
 
     ast.batch_ast()
+    
+    ast.re_load_failed_jobs()
+    
+    ast.re_batch_failed_ast()
 
 
     print("AST Factory Complete")
