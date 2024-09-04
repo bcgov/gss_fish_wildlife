@@ -36,11 +36,13 @@ import geopandas
 import arcpy
 import datetime
 import logging
+import threading
 
 ## *** INPUT YOUR EXCEL FILE NAME HERE ***
-excel_file = '9_wmus.xlsx'
+excel_file = '2_wmus.xlsx'
 
-
+# Define the job timeout in seconds (6 hours)
+JOB_TIMEOUT = 6 * 60 * 60
 
 ###############################################################################################################################################################################
 # Set up logging
@@ -449,33 +451,7 @@ class AST_FACTORY:
         # Save the workbook with the updated condition
         wb.save(self.queuefile)
         
-    # def test_add_job_result(self):
-    #     ''' Test function for add_job_result '''
-    #     print("Testing add_job_result function...")
-    #     logger.info("Testing add_job_result function...")
-
-    #     # Simulate job index and condition
-    #     test_job_index = 0  # First job in the list 
-    #     test_condition = 'TestComplete'
-
-    #     # Call add_job_result to update the Excel file
-    #     self.add_job_result(test_job_index, test_condition)
-
-    #     # Load the workbook and check if the condition was updated
-    #     wb = load_workbook(filename=self.queuefile)
-    #     ws = wb[self.XLSX_SHEET_NAME]
-    #     header = list([row for row in ws.iter_rows(min_row=1, max_col=None, values_only=True)][0])
-    #     ast_condition_index = header.index(self.AST_CONDITION_COLUMN) + 1
-
-    #     # Read the updated condition from the Excel sheet
-    #     updated_condition = ws.cell(row=test_job_index + 2, column=ast_condition_index).value  # +2 to account for header and 0-index
-
-    #     if updated_condition == test_condition:
-    #         print("Test passed: Condition updated correctly in Excel.")
-    #         logger.info("Test passed: Condition updated correctly in Excel.")
-    #     else:
-    #         print("Test failed: Condition not updated correctly in Excel.")
-    #         logger.error("Test failed: Condition not updated correctly in Excel.")
+ 
 
 
     def batch_ast(self):
@@ -544,24 +520,50 @@ class AST_FACTORY:
                 #self.add_job_result(job_index, 'Failed')
             finally:
                 counter += 1
-    
-    # def rerun_failed_jobs(self):
-    #     '''After all jobs have run, this function will scan the excel sheet job result for jobs entered as "failed", 
-    #     if a job is found as failed it will change 'dont_overwrite_outputs' and rerun the job'''
+
+    def run_job_with_timeout(self, job):
+        """
+        Runs the job with a timeout. If the job exceeds the timeout, it stops, marks it as failed, 
+        updates the 'dont_overwrite_outputs' to True, and retries the job.
+        """
+        def target(job, job_index):
+            try:
+                self.start_ast_tb([job])
+                self.add_job_result(job_index, 'Complete')
+            except Exception as e:
+                self.add_job_result(job_index, 'Failed')
+                logger.error(f"Error running job {job_index}: {e}")
         
-    #     # iterate through the excel sheet of jobs and look for "failed" jobs in the ast_condition column, if the job condition is failed,
-    #     # change the 'dont_overwrite_outputs' to True and rerun the job
-    #     for job in self.jobs:
-    #         # Check the ast_condition column for failed jobs
-    #         if job.get('ast_condition') == 'Failed':
-                
-    #             # If the job is failed, change the 'dont_overwrite_outputs' to True and rerun the job
-    #             job['dont_overwrite_outputs'] = True
-                
-    #             # Rerun the job
-    #             self.start_ast_tb([job])
-    #             print(f"Job # {counter} rerun")
-    #             logger.info(f"Job # {counter}/ {job} rerun")
+        job_index = self.jobs.index(job)
+        thread = threading.Thread(target=target, args=(job, job_index))
+        thread.start()
+        thread.join(JOB_TIMEOUT)  # Wait for the thread to complete with the defined timeout
+
+        if thread.is_alive():
+            # If the job is still running after the timeout, stop it and mark as failed
+            print(f"Job {job_index + 1} exceeded timeout and was stopped.")
+            logger.warning(f"Job {job_index + 1} exceeded timeout and was stopped.")
+            self.add_job_result(job_index, 'Failed')
+            self.update_dont_overwrite_outputs(job_index)  # Update to set 'dont_overwrite_outputs' to True
+            
+    def update_dont_overwrite_outputs(self, job_index):
+        """
+        Updates the 'dont_overwrite_outputs' column to True for the specified job index in the Excel sheet.
+        """
+        print(f"Updating 'dont_overwrite_outputs' to True for job {job_index + 1}.")
+        logger.info(f"Updating 'dont_overwrite_outputs' to True for job {job_index + 1}.")
+        
+        # Load the workbook and worksheet
+        wb = load_workbook(filename=self.queuefile)
+        ws = wb[self.XLSX_SHEET_NAME]
+        
+        # Find the column index for 'dont_overwrite_outputs'
+        header = list([row for row in ws.iter_rows(min_row=1, max_col=None, values_only=True)][0])
+        dont_overwrite_index = header.index('dont_overwrite_outputs') + 1  # Excel is 1-indexed
+        
+        # Update the cell value to True
+        ws.cell(row=job_index + 2, column=dont_overwrite_index, value=True)
+        wb.save(self.queuefile)
 
     def re_load_failed_jobs(self):
         
