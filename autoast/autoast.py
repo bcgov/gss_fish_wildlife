@@ -36,7 +36,7 @@ import geopandas
 import arcpy
 import datetime
 import logging
-import threading
+
 
 ## *** INPUT YOUR EXCEL FILE NAME HERE ***
 excel_file = '2_wmus.xlsx'
@@ -475,6 +475,7 @@ class AST_FACTORY:
                 
                 # Start the Ast Tool
                 self.start_ast_tb([job])
+                self.add_job_result(job_index, 'Complete')
                 print(f"Job {counter} Complete")
                 logger.info(f"Job {counter} Complete")
 
@@ -521,49 +522,7 @@ class AST_FACTORY:
             finally:
                 counter += 1
 
-    def run_job_with_timeout(self, job):
-        """
-        Runs the job with a timeout. If the job exceeds the timeout, it stops, marks it as failed, 
-        updates the 'dont_overwrite_outputs' to True, and retries the job.
-        """
-        def target(job, job_index):
-            try:
-                self.start_ast_tb([job])
-                self.add_job_result(job_index, 'Complete')
-            except Exception as e:
-                self.add_job_result(job_index, 'Failed')
-                logger.error(f"Error running job {job_index}: {e}")
-        
-        job_index = self.jobs.index(job)
-        thread = threading.Thread(target=target, args=(job, job_index))
-        thread.start()
-        thread.join(JOB_TIMEOUT)  # Wait for the thread to complete with the defined timeout
 
-        if thread.is_alive():
-            # If the job is still running after the timeout, stop it and mark as failed
-            print(f"Job {job_index + 1} exceeded timeout and was stopped.")
-            logger.warning(f"Job {job_index + 1} exceeded timeout and was stopped.")
-            self.add_job_result(job_index, 'Failed')
-            self.update_dont_overwrite_outputs(job_index)  # Update to set 'dont_overwrite_outputs' to True
-            
-    def update_dont_overwrite_outputs(self, job_index):
-        """
-        Updates the 'dont_overwrite_outputs' column to True for the specified job index in the Excel sheet.
-        """
-        print(f"Updating 'dont_overwrite_outputs' to True for job {job_index + 1}.")
-        logger.info(f"Updating 'dont_overwrite_outputs' to True for job {job_index + 1}.")
-        
-        # Load the workbook and worksheet
-        wb = load_workbook(filename=self.queuefile)
-        ws = wb[self.XLSX_SHEET_NAME]
-        
-        # Find the column index for 'dont_overwrite_outputs'
-        header = list([row for row in ws.iter_rows(min_row=1, max_col=None, values_only=True)][0])
-        dont_overwrite_index = header.index('dont_overwrite_outputs') + 1  # Excel is 1-indexed
-        
-        # Update the cell value to True
-        ws.cell(row=job_index + 2, column=dont_overwrite_index, value=True)
-        wb.save(self.queuefile)
 
     def re_load_failed_jobs(self):
         
@@ -621,7 +580,7 @@ class AST_FACTORY:
                 # Check if the ast_condition is None, empty, or not 'Complete'
                 if ast_condition is value:
                     # Assign 'Queued' to the ast_condition and update the job dictionary
-                    ast_condition = 'Failed job Queued'
+                    ast_condition = 'Queued'
                     job[self.AST_CONDITION_COLUMN] = ast_condition
 
                     # Immediately update the Excel sheet with the new condition
@@ -642,8 +601,8 @@ class AST_FACTORY:
 
                 # Add the job to the jobs list
                 self.jobs.append(job)
-                print(f"Job Condition is Failed Job Queued', adding job: {row_index} to jobs list")
-                logger.info(f"Job Condition is not 'Failed Job Queued', adding job: {row_index} to jobs list")
+                print(f"Job Condition is Queued', adding job: {row_index} to jobs list")
+                logger.info(f"Job Condition is 'Queued', adding job: {row_index} to jobs list")
 
                 print(f"Job dictionary is {job}")
                 logger.info(f"Job dictionary is {job}")
@@ -841,8 +800,7 @@ if __name__ == '__main__':
     # Create and instance of the Ast Factory class, assign the quefile path and the bcgw username and passwords to the instance
     ast = AST_FACTORY(qf, secrets[0], secrets[1])
 
-    # Run the write to excel test
-    #ast.test_add_job_result()
+
 
     if not os.path.exists(qf):
         print("Queuefile not found, creating new queuefile")
@@ -855,9 +813,9 @@ if __name__ == '__main__':
 
     ast.batch_ast()
     
-    ast.re_load_failed_jobs()
+    # ast.re_load_failed_jobs()
     
-    ast.re_batch_failed_ast()
+    # ast.re_batch_failed_ast()
 
 
     print("AST Factory Complete")
