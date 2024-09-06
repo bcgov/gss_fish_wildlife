@@ -279,7 +279,8 @@ class AST_FACTORY:
 
                         # Immediately update the Excel sheet with the new condition
                         try:
-                            self.add_job_result(row_index - 2, ast_condition)  
+                            self.add_job_result(row_index - 1, ast_condition)  
+                            logger.info(f"Added job result {row_index -1} to jobs list")
                         except Exception as e:
                             print(f"Error updating Excel sheet at row {row_index}: {e}")
                             logger.error(f"Error updating Excel sheet at row {row_index}: {e}")
@@ -287,18 +288,17 @@ class AST_FACTORY:
 
                     # Add the job to the jobs list
                     self.jobs.append(job)
-                    print(f"Job Condition is not 'Complete', adding job: {row_index} to jobs list")
-                    logger.info(f"Job Condition is not 'Complete', adding job: {row_index} to jobs list")
+                    print(f"Job Condition is not 'Complete', adding job: {row_index -1} to jobs list")
+                    logger.info(f"Job Condition is not 'Complete', adding job: {row_index -1 } to jobs list")
 
                     print(f"Job dictionary is {job}")
                     logger.info(f"Job dictionary is {job}")
 
-                # Classify input types for all loaded jobs
-                print("Classifying input types")
-                logger.info("Classifying input types")
                 for job in self.jobs:
                     try:
                         self.classify_input_type(job)
+                        print(f"Classifying input type for {row_index -1}")
+                        logger.info(f"Classifying input type {row_index -1}")
                     except Exception as e:
                         print(f"Error classifying input type for job {job}: {e}")
                         logger.error(f"Error classifying input type for job {job}: {e}")
@@ -321,7 +321,7 @@ class AST_FACTORY:
         might be able to be removed'''
         
         print("Classifying input type")
-        logger.info("Classifying input type")
+        logger.info("Classifying input type....")
         # input_type = None
         # file_name, extension = os.path.basename(input).split()
 
@@ -340,8 +340,8 @@ class AST_FACTORY:
                     job['feature_layer'] = self.build_aoi_from_kml(feature_layer_path)
                 elif feature_layer_path.lower().endswith('.shp'):
                     if job.get('file_number'):
-                        print(f"File number found, running FW setup on shapefile: {feature_layer_path}")
-                        logger.info(f"File number found, running FW setup on shapefile: {feature_layer_path}")
+                        print(f"File number found for job {job_index}, running FW setup on shapefile: {feature_layer_path}")
+                        logger.info(f"File number found for job {job_index}, running FW setup on shapefile: {feature_layer_path}")
                         new_feature_layer_path = self.build_aoi_from_shp(job, feature_layer_path)
                         job['feature_layer'] = new_feature_layer_path
                     else:
@@ -427,8 +427,8 @@ class AST_FACTORY:
             logger.error(f"Unexpected error: {e}")
             
     def add_job_result(self, job_index, condition):
-        ''' Jared to complete this.
-        Function adds result information to the excel spreadsheet. If the job result is successful, it will update the ast_condition column to "Complete",
+        ''' 
+        Function adds result information to the excel spreadsheet. If the job  is successful, it will update the ast_condition column to "Complete",
         if the job failed, it will update the ast_condition column to "Failed" '''
         
         print("Adding job result...")
@@ -464,20 +464,25 @@ class AST_FACTORY:
         logger.info("***************************************************************************************************************************")
         logger.info("Batching AST")        
         logger.info("***************************************************************************************************************************")
-        print(f"Number of jobs: {len(self.jobs)}")
-        logger.info(f"Number of jobs: {len(self.jobs)}")
+        number_of_jobs = len(self.jobs)
+        print(f"Number of jobs: {number_of_jobs}")
+        logger.info(f"Number of jobs: {number_of_jobs}")
         
         # iterate through the jobs and run the start_ast_tb function on each row of the excel sheet
         for job in self.jobs:
             try:
-                print(f"Starting job {counter}")
-                logger.info(f"Starting job {counter}")
+                print(f"Starting job {counter} of {number_of_jobs}")
+                logger.info(f"Starting job {counter} of {number_of_jobs}")
                 
                 # Start the Ast Tool
                 self.start_ast_tb([job])
-                self.add_job_result(job_index, 'Complete')
-                print(f"Job {counter} Complete")
-                logger.info(f"Job {counter} Complete")
+                #TODO insert time out function here
+                # If the arcpymessage that is returned contains the text "Automated_status_sheet.xlsx is ready for you to use" then the job is complete
+                if arcpy.GetMessages(0) == "Automated_status_sheet.xlsx is ready for you to use":
+                    self.add_job_result(job_index, 'Complete')
+
+                    print(f"AST SUCCESS MESSAGE RECEIVED. Job {counter} Complete")
+                    logger.info(f"AST SUCCESS MESSAGE RECEIVED. Job {counter} Complete")
 
             except Exception as e:
                 # Log the exception and the job that caused it
@@ -513,20 +518,19 @@ class AST_FACTORY:
                 self.start_ast_tb([job])
                 print(f"Job {counter} Complete")
                 logger.info(f"Job {counter} Complete")
+                self.add_job_result(job_index, 'Complete')
 
             except Exception as e:
                 # Log the exception and the job that caused it
                 print(f"Error encountered with job {counter}: {e}")
                 logger.error(f"Error encountered with job {counter}: {e}")
-                #self.add_job_result(job_index, 'Failed')
+                self.add_job_result(job_index, 'Failed')
             finally:
                 counter += 1
 
 
 
     def re_load_failed_jobs(self):
-        
-
         global job_index
 
         print("Loading Failed jobs")
@@ -534,9 +538,7 @@ class AST_FACTORY:
 
         # Initialize the jobs list to store jobs
         self.jobs = []
-        
-
-        
+    
         try:
             # Open the Excel workbook and select the correct sheet
             wb = load_workbook(filename=self.queuefile)
