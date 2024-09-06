@@ -16,7 +16,7 @@
 # limitations under the License.
 
 '''
-Job 1 Complete
+Job 1 COMPLETE
 Starting job 2
 Starting AST Toolbox
 Job Parameters are: ['Northeast', '\\\\spatialfiles\\work\\lwbc\\nsr\\Workarea\\fcbc_fsj\\Wildlife\\2024\\876367\\876367.shp', '', '', '', '', True, False, False, True, False, True, 'Queu
@@ -271,37 +271,54 @@ class AST_FACTORY:
                         if key is not None:
                             job[key] = value
 
-                    # Check if the ast_condition is None, empty, or not 'Complete'
+                    # Check if the ast_condition is "COMPLETE"; if so, skip adding this job
+                    if ast_condition.upper() == 'COMPLETE':
+                        print(f"Skipping job {row_index - 1} as it is marked COMPLETE.")
+                        logger.info(f"Skipping job {row_index - 1} as it is marked COMPLETE.")
+                        continue  # Skip this job as it's already marked as COMPLETE
+                    
+                    # Check if the ast_condition is None, empty, or not 'COMPLETE'
                     if ast_condition is None or ast_condition.strip() == '' or ast_condition.upper() != 'COMPLETE':
                         # Assign 'Queued' to the ast_condition and update the job dictionary
                         ast_condition = 'Queued'
                         job[self.AST_CONDITION_COLUMN] = ast_condition
+                        logger.info(f"Job {row_index - 1} is {ast_condition}")
 
                         # Immediately update the Excel sheet with the new condition
                         try:
                             self.add_job_result(row_index - 1, ast_condition)  
-                            logger.info(f"Added job result {row_index -1} to jobs list")
+                            logger.info(f"Added job condition {ast_condition} for job {row_index -1} to jobs list")
                         except Exception as e:
                             print(f"Error updating Excel sheet at row {row_index}: {e}")
                             logger.error(f"Error updating Excel sheet at row {row_index}: {e}")
                             continue  
-
+                        
+                    #TODO is this too low in the script?
                     # Add the job to the jobs list
                     self.jobs.append(job)
-                    print(f"Job Condition is not 'Complete', adding job: {row_index -1} to jobs list")
-                    logger.info(f"Job Condition is not 'Complete', adding job: {row_index -1 } to jobs list")
+                    print(f"Job Condition is not Complete ({ast_condition}), adding job: {row_index -1} to jobs list")
+                    logger.info(f"Job Condition is not Complete ({ast_condition}), adding job: {row_index -1} to jobs list")
 
                     print(f"Job dictionary is {job}")
                     logger.info(f"Job dictionary is {job}")
+                        
+                    for job in self.jobs:
+                        '''
+                        Loop through the jobs and classify the input type. If the input file is a .kml it will build the aoi from the kml.
+                        If it is a .shp it will build the aoi based on the shapefile. If it is a shapefile AND a filenumber is present, 
+                        it will run the FW setup script on the shapefile, writing the appended shapefile to an output directory based on the file numer.
+                        '''
+                        try:
+                            self.classify_input_type(job)
+                            print(f"Classifying input type for {row_index -1}")
+                            logger.info(f"Classifying input type {row_index -1}")
+                        except Exception as e:
+                            print(f"Error classifying input type for job {job}: {e}")
+                            logger.error(f"Error classifying input type for job {job}: {e}")
+                    
 
-                for job in self.jobs:
-                    try:
-                        self.classify_input_type(job)
-                        print(f"Classifying input type for {row_index -1}")
-                        logger.info(f"Classifying input type {row_index -1}")
-                    except Exception as e:
-                        print(f"Error classifying input type for job {job}: {e}")
-                        logger.error(f"Error classifying input type for job {job}: {e}")
+
+
 
             except FileNotFoundError as e:
                 print(f"Error: Queue file not found - {e}")
@@ -398,7 +415,7 @@ class AST_FACTORY:
 
                     job_index = self.jobs.index(job)
 
-                    self.add_job_result(job_index, 'Complete')
+                    self.add_job_result(job_index, 'COMPLETE')
                     #self.add_job_result(job)
                     
                     return job_index
@@ -428,7 +445,7 @@ class AST_FACTORY:
             
     def add_job_result(self, job_index, condition):
         ''' 
-        Function adds result information to the excel spreadsheet. If the job  is successful, it will update the ast_condition column to "Complete",
+        Function adds result information to the excel spreadsheet. If the job  is successful, it will update the ast_condition column to "COMPLETE",
         if the job failed, it will update the ast_condition column to "Failed" '''
         
         print("Adding job result...")
@@ -479,10 +496,10 @@ class AST_FACTORY:
                 #TODO insert time out function here
                 # If the arcpymessage that is returned contains the text "Automated_status_sheet.xlsx is ready for you to use" then the job is complete
                 if arcpy.GetMessages(0) == "Automated_status_sheet.xlsx is ready for you to use":
-                    self.add_job_result(job_index, 'Complete')
+                    self.add_job_result(job_index, 'COMPLETE')
 
-                    print(f"AST SUCCESS MESSAGE RECEIVED. Job {counter} Complete")
-                    logger.info(f"AST SUCCESS MESSAGE RECEIVED. Job {counter} Complete")
+                    print(f"AST SUCCESS MESSAGE RECEIVED. Job {counter} COMPLETE")
+                    logger.info(f"AST SUCCESS MESSAGE RECEIVED. Job {counter} COMPLETE")
 
             except Exception as e:
                 # Log the exception and the job that caused it
@@ -516,9 +533,9 @@ class AST_FACTORY:
                 
                 # Start the Ast Tool
                 self.start_ast_tb([job])
-                print(f"Job {counter} Complete")
-                logger.info(f"Job {counter} Complete")
-                self.add_job_result(job_index, 'Complete')
+                print(f"Job {counter} COMPLETE")
+                logger.info(f"Job {counter} COMPLETE")
+                self.add_job_result(job_index, 'COMPLETE')
 
             except Exception as e:
                 # Log the exception and the job that caused it
@@ -579,7 +596,7 @@ class AST_FACTORY:
                     #     logger.info(f"Re running job value is {value}")
                     #     job[key] = value
 
-                # Check if the ast_condition is None, empty, or not 'Complete'
+                # Check if the ast_condition is None, empty, or not 'COMPLETE'
                 if ast_condition is value:
                     # Assign 'Queued' to the ast_condition and update the job dictionary
                     ast_condition = 'Queued'
@@ -820,5 +837,5 @@ if __name__ == '__main__':
     # ast.re_batch_failed_ast()
 
 
-    print("AST Factory Complete")
-    logger.info("AST Factory Complete")
+    print("AST Factory COMPLETE")
+    logger.info("AST Factory COMPLETE")
