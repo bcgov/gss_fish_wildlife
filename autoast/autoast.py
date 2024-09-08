@@ -306,7 +306,7 @@ class AST_FACTORY:
                         '''
                         Loop through the jobs and classify the input type. If the input file is a .kml it will build the aoi from the kml.
                         If it is a .shp it will build the aoi based on the shapefile. If it is a shapefile AND a filenumber is present, 
-                        it will run the FW setup script on the shapefile, writing the appended shapefile to an output directory based on the file numer.
+                        it will run the FW setup script on the shapefile, writing the appended shapefile to an output directory based on the file number.
                         '''
                         try:
                             self.classify_input_type(job)
@@ -376,7 +376,7 @@ class AST_FACTORY:
         global job_index
         '''Starts an AST toolbox from job params. It will check the capitalization of the True or False inputs and 
         change them to appropriate booleans as the script was failing before implementing this.
-        It will also create the output directory if it does not exist based on the job number. Currently this is being created in the T: drive.
+        It will also create the output directory for the FW Setup Shapefiles, if it does not exist based on the job number. Currently this is being created in the T: drive.
         but should be updated once on the server. It checks to make a sure a region has been input on the excel sheet as this is a required parameter.
         It will also catch any errors that are thrown and print them to the console.'''
         try:
@@ -411,7 +411,12 @@ class AST_FACTORY:
                     arcpy.MakeAutomatedStatusSpreadsheet_ast(*params)
                     
                     self.capture_arcpy_messages()
-                    
+                    if arcpy.GetMessages(0) == "Automated_status_sheet.xlsx is ready for you to use":
+                        logger.info(f"AST SUCCESS MESSAGE RECEIVED. Job {counter} COMPLETE")
+
+                    print(f"AST SUCCESS MESSAGE RECEIVED. Job {counter} COMPLETE")
+                    logger.info(f"AST SUCCESS MESSAGE RECEIVED. Job {counter} COMPLET ****Automated_status_sheet.xlsx is ready for you to useE")
+                    logger.info("***************************************************************************************************************************")
 
                     job_index = self.jobs.index(job)
 
@@ -633,7 +638,7 @@ class AST_FACTORY:
                 try:
                     self.classify_input_type(job)
                 except Exception as e:
-                    print(f"Error classifying input type for faiiled job {job}: {e}")
+                    print(f"Error classifying input type for failed job {job}: {e}")
                     logger.error(f"Error classifying input type for failed job {job}: {e}")
 
         except FileNotFoundError as e:
