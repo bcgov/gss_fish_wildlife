@@ -15,19 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-'''
-Job 1 COMPLETE
-Starting job 2
-Starting AST Toolbox
-Job Parameters are: ['Northeast', '\\\\spatialfiles\\work\\lwbc\\nsr\\Workarea\\fcbc_fsj\\Wildlife\\2024\\876367\\876367.shp', '', '', '', '', True, False, False, True, False, True, 'Queu
-ed']
-Arcpy error: ERROR 000622: Failed to execute (Automated Status Tool). Parameters are not valid.
-ERROR 000628: Cannot set input into parameter DO_NOT_USE_Debug.'''
-
-
-
-
-
 import os
 import shutil
 from openpyxl import Workbook, load_workbook
@@ -52,9 +39,12 @@ def setup_logging():
     # Create the log folder filename
     log_folder = f'autoast_logs_{datetime.datetime.now().strftime("%Y%m%d")}'
 
-    # Create the log folder in the current directory if it doesnt exits
+    # Create the log folder in the current directory if it doesn't exits
     if not os.path.exists(log_folder):
         os.mkdir(log_folder)
+    
+    # Check if the log folder was created successfully
+    assert os.path.exists(log_folder), "Error creating log folder, check permissions and path"
 
     # Create the log file path with the date and time appended
     log_file = os.path.join(log_folder, f'ast_log_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
