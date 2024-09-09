@@ -362,7 +362,7 @@ class AST_FACTORY:
             logging.info("Starting AST Toolbox")
 
             #DELETE the batch function should loop the spreadsheet and run the start_ast_tb function on each row of the excel sheet
-            # Loop over the jobs in the spreadsheet
+            # Loop over the jobs in the spreadsheet#
             for job in jobs:
                 params = []
                 
