@@ -632,7 +632,7 @@ class AST_FACTORY:
                         print(f"Error updating Excel sheet at row {row_index}: {e}")
                         logger.error(f"Error updating Excel sheet at row {row_index}: {e}")
                         continue  
-
+                                            
                 # Add the job to the jobs list
                 self.jobs.append(job)
                 print(f"Job Condition is Queued', adding job: {row_index} to jobs list")
