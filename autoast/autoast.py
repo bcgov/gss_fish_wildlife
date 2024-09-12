@@ -281,7 +281,7 @@ class AST_FACTORY:
 
                         # Assign an empty string to any None values
                         value = "" if value is None else value
-                        logger.info(f"Loading Job {row_index} - Key: {key}, Value: {value}")
+                        logger.info(f"Loading Job {row_index -1} - Key: {key}, Value: {value}") #Row index - 1 because Job 1 was being listed as job 2
                         # Assign the value to the job dictionary if the key is not None
                         if key is not None:
                             job[key] = value
@@ -319,11 +319,10 @@ class AST_FACTORY:
 
                     # Add the job to the jobs list after all checks and processing
                     self.jobs.append(job)
-                    print(f"Job Condition is not Complete ({ast_condition}), adding job: {row_index - 1} to jobs list")
-                    logger.info(f"Job Condition is not Complete ({ast_condition}), adding job: {row_index - 1} to jobs list")
+                    print(f"Job Condition is  ({ast_condition}), adding job: {row_index - 1} to jobs list")
+                    logger.info(f"Job Condition is ({ast_condition}), adding job: {row_index - 1} to jobs list")
 
-                    print(f"Job dictionary is {job}")
-                    logger.info(f"Job dictionary is {job}")
+
 
             except FileNotFoundError as e:
                 print(f"Error: Queue file not found - {e}")
@@ -335,17 +334,16 @@ class AST_FACTORY:
             return self.jobs
 
 
-
     def classify_input_type(self, input):
         ''' If the input file is a .kml it will build the aoi from the kml.
         If it is a .shp it will build the aoi based on the shapefile.
         If it is a shapefile AND a filenumber is present, it will run the FW setup script on the shapefile, writing the appended 
         shapefile to an output directory based on the file numer. This step of writing the appended shapefile to an output directory
-        might be able to be removed'''
+        might be able to be removed
         
+        Called inside LOAD JOBS
+        '''
 
-        # input_type = None
-        # file_name, extension = os.path.basename(input).split()
 
         
         for job in self.jobs:                # Check if there is a file path in Feature Layer
@@ -374,21 +372,7 @@ class AST_FACTORY:
                     logger.warning(f"Job number {job_index} Unsupported feature layer format: {feature_layer_path}")
                     self.add_job_result(job_index, 'Failed')
 
-        def process_job(self, job):
-            """Process an individual job."""
-            # Ensure the logger is set up for each process in multiprocessing
-            global logger
-            if logger is None:
-                logger = setup_logging()
 
-            try:
-                print(f"Processing job: {job}")
-                logger.info(f"Processing job: {job}")
-                # Call to your actual processing function or script logic
-                self.start_ast_tb([job])
-            except Exception as e:
-                print(f"Error processing job {job}: {e}")
-                logger.error(f"Error processing job {job}: {e}")
     
     
     def start_ast_tb(self, jobs):
@@ -447,7 +431,7 @@ class AST_FACTORY:
                     job_index = self.jobs.index(job)
 
                     self.add_job_result(job_index, 'COMPLETE')
-                    #self.add_job_result(job)
+
                     
                     return job_index
                     
@@ -480,8 +464,12 @@ class AST_FACTORY:
         if the job failed, it will update the ast_condition column to "Failed".
         '''
 
-        print("Adding job result...")
-        logger.info("Adding job result...")
+        print("Running Add Job Results...")
+        logger.info("##########################################################################################################################")
+        logger.info("#")
+        logger.info("Running Add Job Results...")
+        logger.info("#")
+        logger.info("##########################################################################################################################")
 
         try:
             # Load the workbook
@@ -499,7 +487,7 @@ class AST_FACTORY:
             # Check if the row is blank before updating
             row_values = [ws.cell(row=excel_row_index, column=col).value for col in range(1, len(header) + 1)]
             if all(value is None or str(value).strip() == '' for value in row_values):
-                print(f"Add Job Result -Row {excel_row_index} is blank, not updating.")
+                print(f"Add Job Result - Row {excel_row_index} is blank, not updating.")
                 logger.info(f"Add Job Result - Row {excel_row_index} is blank, not updating.")
                 return  # Do not update if the row is blank
 
@@ -566,69 +554,82 @@ class AST_FACTORY:
     #         finally:
     #             counter += 1
     
-    # def batch_ast(self):
-    #     """Run all jobs in parallel using multiprocessing."""
-    #     print("Batching AST with multiprocessing")
-    #     logger.info("Batching AST with multiprocessing")
+    def batch_ast_v1(self): 
+        """Run all jobs in parallel using multiprocessing. Batch_AST V1"""
+        print("Batching AST V1 with multiprocessing")
+        logger.info("Batching AST with multiprocessing")
 
-    #     # Create a multiprocessing pool
-    #     results = [] # Create an empty list to store results
-    #     print("Creating empty results list")
-    #     logger.info("Creating empty results list")
-        
-    #     with mp.Pool(NUMBER_OF_JOBS) as pool:
-    #         # Run each job in parallel using apply_async
-    #         print("Starting pool")
-    #         # Loop through each job and apply it asynchronously using the pool
-    #         for job in self.jobs:
-    #             print(f"Starting job {job}")
-    #             logger.info(f"Starting job {job}")
-    #             result = pool.apply_async(self.start_ast_tb, ([job],)) 
-    #             print(f"Job {job} completed")
-    #             logger.info(f"Job {job} completed")
-                
-    #             # Append the result to the results list
-    #             results.append(result)
-    #             print("Results appended")
+        # Create a multiprocessing pool
+        results = []  # Create an empty list to store results
+        print("Creating empty results list")
+        logger.info("Creating empty results list")
 
-    #         # Close and join the pool to ensure all processes complete
-    #         pool.close()
-    #         pool.join()
-    #         logger.info("Pool closed and joined")
-            
-    #         # Check results for completion or errors
-    #         for result in results:
-    #             start_time = time.time()  # Start time of the job
-    #             print("Startingn Timer")
-    #             logger.info("Starting Timer")
-    #             try:
-    #                 result.get(timeout=JOB_TIMEOUT)  # Optional: use timeout to handle long-running jobs
-    #                 duration = time.time() - start_time  
-    #                 print(f"Start time for job is {start_time}")
-    #                 logger.info(f"Start time for job is {start_time}")
-                    
-    #                 # Calculate the job duration
-    #                 print(f"Job completed in {duration:.2f} seconds.")
-    #                 logger.info(f"Job completed in {duration:.2f} seconds.")
-                    
-    #                 # Action if job duration exceeds allowed time
-    #                 if duration > JOB_TIMEOUT:
-    #                     print(f"Job took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed for for Rebatch.")
-    #                     logger.warning(f"Job took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed for Rebatch.")
-    #                     self.add_job_result(job_index, 'Failed1')
-    #             except TimeoutError:
-    #                 duration = time.time() - start_time  # Calculate the duration at timeout
-    #                 print(f"Job TIMEOUT: The job took too long and timed out after {duration:.2f} seconds.")
-    #                 logger.error(f"Job TIMEOUT: The job took too long and timed out after {duration:.2f} seconds.")
-    #                 # Rebatch the job if it times out
-    #             except Exception as e:
-    #                 duration = time.time() - start_time  # Calculate the duration if other exceptions occur
-    #                 print(f"Job failed with error: {e} after {duration:.2f} seconds.")
-    #                 logger.error(f"Job failed with error: {e} after {duration:.2f} seconds.")
+        with mp.Pool(NUMBER_OF_JOBS) as pool:
+            print("Starting pool")
+
+            # Loop through each job and apply it asynchronously using the pool
+            for job in self.jobs:
+                print(f"Starting job {job}")
+                logger.info(f"Starting job {job}")
+
+                # Capture the arcpy messages for each job
+                self.capture_arcpy_messages()
+
+                # Capture the start time just before applying the async job
+                start_time = time.perf_counter() 
+                result = pool.apply_async(self.start_ast_tb, ([job],)) 
+
+                # Store both the result and its start time in a tuple
+                results.append((result, start_time))
+                print("Pool Results appended")
+                logger.info("Pool Results appended")
+
+            # Close and join the pool to ensure all processes complete
+            pool.close()
+            pool.join()
+            print("Pool closed and joined")
+            logger.info("Pool closed and joined")
+
+            # Check results for completion or errors
+            for result, start_time in results:
+                print(f"Starting Timer at {start_time}")
+                logger.info(f"Starting Timer - start time is {start_time}")
+
+                try:
+                    logger.info("Before result.get() call")
+                    result.get(timeout=JOB_TIMEOUT)
+                    logger.info("After result.get() call")
+
+                    duration = time.perf_counter() - start_time
+                    print(f"Start time for job is {start_time}")
+                    logger.info(f"Start time for job is {start_time}")
+
+                    # Calculate the job duration
+                    print(f"Results: Job completed in {duration:.2f} seconds.")
+                    logger.info(f"Results: Job completed in {duration:.2f} seconds.")
+
+                    # Action if job duration exceeds allowed time
+                    if duration > JOB_TIMEOUT:
+                        print(f"Job took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed for Rebatch.")
+                        logger.warning(f"Job took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed for Rebatch.")
+                        self.add_job_result(job_index, 'Failed1')
+
+                except TimeoutError:
+                    duration = time.perf_counter() - start_time
+                    print(f"Job TIMEOUT: The job took too long and timed out after {duration:.2f} seconds.")
+                    logger.error(f"Job TIMEOUT: The job took too long and timed out after {duration:.2f} seconds.")
+
+                except Exception as e:
+                    duration = time.perf_counter() - start_time
+                    print(f"Job failed with error: {e} after {duration:.2f} seconds.")
+                logger.error(f"Job failed with error: {e} after {duration:.2f} seconds.")
 
 
-    def batch_ast(self):
-        """Run all jobs in parallel using concurrent.futures for better timeout and job management."""
+
+    def batch_ast_v2(self):
+        '''
+        Uses multiprocssing to run the NUMBER of JOBs in pool
+        '''
         print("Batching AST with ProcessPoolExecutor")
         logger.info("Batching AST with ProcessPoolExecutor")
         import concurrent.futures
@@ -642,6 +643,9 @@ class AST_FACTORY:
                 job = futures[future]
                 start_time = time.time()
                 try:
+                    
+                    # Capture the arcpy messages for each job
+                    self.capture_arcpy_messages()
                     # Set a timeout to control how long to wait for the job result
                     future.result(timeout=JOB_TIMEOUT)
                     duration = time.time() - start_time
@@ -993,7 +997,7 @@ if __name__ == '__main__':
     # load the jobs using the load jobs method. This will scan the excel sheet and assign to "jobs"    
     jobs = ast.load_jobs()
     
-    ast.batch_ast()
+    ast.batch_ast_v1()
     
     # ast.re_load_failed_jobs()
     
