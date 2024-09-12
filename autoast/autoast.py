@@ -28,13 +28,14 @@ import multiprocessing as mp
 from tqdm import tqdm
 import sys
 import time
+import concurrent
 
 
 ## *** INPUT YOUR EXCEL FILE NAME HERE ***
 excel_file = '2_wmus.xlsx'
 
 # Define the job timeout in seconds (6 hours)
-JOB_TIMEOUT = 6 * 60 * 60
+JOB_TIMEOUT = 60
 
 # Number of CPUS to use for multiprocessing
 NUM_CPUS = mp.cpu_count()
@@ -269,6 +270,7 @@ class AST_FACTORY:
 
                     # Initialize a dictionary to store the job's parameters
                     job = {}
+                    logger.info('Creating job dictionary')
                     ast_condition = None  # Initialize the ast_condition for the current row
 
                     # Loop through each column header and corresponding value in the current row
@@ -279,7 +281,7 @@ class AST_FACTORY:
 
                         # Assign an empty string to any None values
                         value = "" if value is None else value
-
+                        logger.info(f"Loading Job {row_index} - Key: {key}, Value: {value}")
                         # Assign the value to the job dictionary if the key is not None
                         if key is not None:
                             job[key] = value
@@ -295,7 +297,7 @@ class AST_FACTORY:
                         # Assign 'Queued' to the ast_condition and update the job dictionary
                         ast_condition = 'Queued'
                         job[self.AST_CONDITION_COLUMN] = ast_condition
-                        logger.info(f"Job {row_index - 1} is {ast_condition}")
+                        logger.info(f"Loading Jobs - Job {row_index - 1} is {ast_condition}")
 
                         # Immediately update the Excel sheet with the new condition
                         try:
@@ -497,8 +499,8 @@ class AST_FACTORY:
             # Check if the row is blank before updating
             row_values = [ws.cell(row=excel_row_index, column=col).value for col in range(1, len(header) + 1)]
             if all(value is None or str(value).strip() == '' for value in row_values):
-                print(f"Row {excel_row_index} is blank, not updating.")
-                logger.info(f"Row {excel_row_index} is blank, not updating.")
+                print(f"Add Job Result -Row {excel_row_index} is blank, not updating.")
+                logger.info(f"Add Job Result - Row {excel_row_index} is blank, not updating.")
                 return  # Do not update if the row is blank
 
             # Update the condition for the specific job
@@ -564,39 +566,108 @@ class AST_FACTORY:
     #         finally:
     #             counter += 1
     
+    # def batch_ast(self):
+    #     """Run all jobs in parallel using multiprocessing."""
+    #     print("Batching AST with multiprocessing")
+    #     logger.info("Batching AST with multiprocessing")
+
+    #     # Create a multiprocessing pool
+    #     results = [] # Create an empty list to store results
+    #     print("Creating empty results list")
+    #     logger.info("Creating empty results list")
+        
+    #     with mp.Pool(NUMBER_OF_JOBS) as pool:
+    #         # Run each job in parallel using apply_async
+    #         print("Starting pool")
+    #         # Loop through each job and apply it asynchronously using the pool
+    #         for job in self.jobs:
+    #             print(f"Starting job {job}")
+    #             logger.info(f"Starting job {job}")
+    #             result = pool.apply_async(self.start_ast_tb, ([job],)) 
+    #             print(f"Job {job} completed")
+    #             logger.info(f"Job {job} completed")
+                
+    #             # Append the result to the results list
+    #             results.append(result)
+    #             print("Results appended")
+
+    #         # Close and join the pool to ensure all processes complete
+    #         pool.close()
+    #         pool.join()
+    #         logger.info("Pool closed and joined")
+            
+    #         # Check results for completion or errors
+    #         for result in results:
+    #             start_time = time.time()  # Start time of the job
+    #             print("Startingn Timer")
+    #             logger.info("Starting Timer")
+    #             try:
+    #                 result.get(timeout=JOB_TIMEOUT)  # Optional: use timeout to handle long-running jobs
+    #                 duration = time.time() - start_time  
+    #                 print(f"Start time for job is {start_time}")
+    #                 logger.info(f"Start time for job is {start_time}")
+                    
+    #                 # Calculate the job duration
+    #                 print(f"Job completed in {duration:.2f} seconds.")
+    #                 logger.info(f"Job completed in {duration:.2f} seconds.")
+                    
+    #                 # Action if job duration exceeds allowed time
+    #                 if duration > JOB_TIMEOUT:
+    #                     print(f"Job took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed for for Rebatch.")
+    #                     logger.warning(f"Job took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed for Rebatch.")
+    #                     self.add_job_result(job_index, 'Failed1')
+    #             except TimeoutError:
+    #                 duration = time.time() - start_time  # Calculate the duration at timeout
+    #                 print(f"Job TIMEOUT: The job took too long and timed out after {duration:.2f} seconds.")
+    #                 logger.error(f"Job TIMEOUT: The job took too long and timed out after {duration:.2f} seconds.")
+    #                 # Rebatch the job if it times out
+    #             except Exception as e:
+    #                 duration = time.time() - start_time  # Calculate the duration if other exceptions occur
+    #                 print(f"Job failed with error: {e} after {duration:.2f} seconds.")
+    #                 logger.error(f"Job failed with error: {e} after {duration:.2f} seconds.")
+
+
     def batch_ast(self):
-        """Run all jobs in parallel using multiprocessing."""
-        print("Batching AST with multiprocessing")
-        logger.info("Batching AST with multiprocessing")
+        """Run all jobs in parallel using concurrent.futures for better timeout and job management."""
+        print("Batching AST with ProcessPoolExecutor")
+        logger.info("Batching AST with ProcessPoolExecutor")
+        import concurrent.futures
+        import time
+        # Use a ProcessPoolExecutor with the specified number of jobs
+        with concurrent.futures.ProcessPoolExecutor(max_workers=NUMBER_OF_JOBS) as executor:
+            # Submit each job to the executor and store the future objects in a dictionary
+            futures = {executor.submit(self.start_ast_tb, [job]): job for job in self.jobs}
 
-        # Create a multiprocessing pool
-        results = [] # Create an empty list to store results
-        print("Creating empty results list")
-        with mp.Pool(NUMBER_OF_JOBS) as pool:
-            # Run each job in parallel using apply_async
-            print("Starting pool")
-            # Loop through each job and apply it asynchronously using the pool
-            for job in self.jobs:
-                print(f"Starting job {job}")
-                logger.info(f"Starting job {job}")
-                result = pool.apply_async(self.start_ast_tb, ([job],)) 
-                print(f"Job {job} completed")
-                logger.info(f"Job {job} completed")
-                results.append(result)
-                print("Results appended")
-
-            # Close and join the pool to ensure all processes complete
-            pool.close()
-            pool.join()
-
-            # Check results for completion or errors
-            for result in results:
+            for future in concurrent.futures.as_completed(futures):
+                job = futures[future]
+                start_time = time.time()
                 try:
-                    result.get(timeout=JOB_TIMEOUT)  # Optional: use timeout to handle long-running jobs
-                except Exception as e:
-                    print(f"Job TIMEOUT failed with error: {e}")
-                    logger.error(f"Job TIMEOUT failed with error: {e}")
+                    # Set a timeout to control how long to wait for the job result
+                    future.result(timeout=JOB_TIMEOUT)
+                    duration = time.time() - start_time
+                    print(f"Job {job} completed in {duration:.2f} seconds.")
+                    logger.info(f"Job {job} completed in {duration:.2f} seconds.")
+                    
+                    # If the job exceeds the timeout, take necessary action
+                    if duration > JOB_TIMEOUT:
+                        print(f"Job {job} took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed.")
+                        logger.warning(f"Job {job} took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed.")
+                        self.add_job_result(self.jobs.index(job), 'Failed')
 
+                except concurrent.futures.TimeoutError:
+                    duration = time.time() - start_time
+                    print(f"Job {job} timed out after {duration:.2f} seconds.")
+                    logger.error(f"Job {job} timed out after {duration:.2f} seconds.")
+                    self.add_job_result(self.jobs.index(job), 'Failed due to Timeout')
+
+                except Exception as e:
+                    duration = time.time() - start_time
+                    print(f"Job {job} failed with error: {e} after {duration:.2f} seconds.")
+                    logger.error(f"Job {job} failed with error: {e} after {duration:.2f} seconds.")
+                    self.add_job_result(self.jobs.index(job), 'Failed due to Error')
+
+    
+    
     # def run_worker():
     #     # Simulate the worker's job directly
     #     for each_job in jobs:
