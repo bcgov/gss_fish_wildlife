@@ -252,20 +252,30 @@ class AST_FACTORY:
                 # Open the Excel workbook and select the correct sheet
                 wb = load_workbook(filename=self.queuefile)
                 ws = wb[self.XLSX_SHEET_NAME]
-
+                print(f'Workbook loaded is {wb}')   
+                logger.info(f'Workbook loaded is {wb}') 
+                
                 # Get the header (column names) from the first row of the sheet
                 header = list([row for row in ws.iter_rows(min_row=1, max_col=None, values_only=True)][0])
-
+                print(f"Header is {header}")
+                logger.info(f"Header is {header}")
+                
                 # Read all the data rows (starting from the second row to skip the header)
-                data = [row for row in ws.iter_rows(min_row=2, max_col=None, values_only=True)]
+                data = []
+                for row in ws.iter_rows(min_row=2, max_col=None, values_only=True):
+                    print(f'Row is {row}')
+                    logger.info(f'Row is {row}')
+                    data.append(row)
 
                 # Iterate over each row of data; enumerate to keep track of the row number in Excel
                 for row_index, row_data in enumerate(data, start=2):  # Start from 2 to account for Excel header
-
+                    
+                    print(f" INSIDE FOR LOOP row index is {row_index} and row index - 1 is {row_index -1} and row data is {row_data}")
+                    
                     # Skip any completely blank rows
                     if all((value is None or str(value).strip() == '') for value in row_data):
-                        print(f"Skipping blank row at index {row_index}")
-                        logger.info(f"Skipping blank row at index {row_index}")
+                        print(f"Skipping blank row at index {row_index -1 }")
+                        logger.info(f"Skipping blank row at index {row_index -1}")
                         continue  # Skip this row entirely
 
                     # Initialize a dictionary to store the job's parameters
@@ -278,10 +288,12 @@ class AST_FACTORY:
                         # Check if the key corresponds to the ast_condition column
                         if key is not None and key.lower() == self.AST_CONDITION_COLUMN.lower():
                             ast_condition = value if value is not None else ""
+                            print(f"Inside for loop key value in zip - AST Condition is {ast_condition}")
 
                         # Assign an empty string to any None values
                         value = "" if value is None else value
                         logger.info(f"Loading Job {row_index -1} - Key: {key}, Value: {value}") #Row index - 1 because Job 1 was being listed as job 2
+                        print(f"Loading Job {row_index -1} - Key: {key}, Value: {value}")
                         # Assign the value to the job dictionary if the key is not None
                         if key is not None:
                             job[key] = value
@@ -482,7 +494,7 @@ class AST_FACTORY:
             ast_condition_index = header.index(self.AST_CONDITION_COLUMN) + 1  # +1 because Excel columns are 1-indexed
 
             # Calculate the actual row index in Excel
-            excel_row_index = job_index + 1  
+            excel_row_index = job_index + 2  # +2 because Excel rows are 1-indexed and we skip the header row  
 
             # Check if the row is blank before updating
             row_values = [ws.cell(row=excel_row_index, column=col).value for col in range(1, len(header) + 1)]
@@ -578,7 +590,7 @@ class AST_FACTORY:
 
             # Loop through each job and apply it asynchronously using the pool
             for index, job in enumerate(self.jobs):
-                job_index = index + 1
+                job_index = index
                 print(f"Inside Pool - Starting job {job_index}")
                 logger.info(f"Inside Pool -Starting job {job_index}")
 
