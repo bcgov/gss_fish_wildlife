@@ -35,7 +35,7 @@ import concurrent
 excel_file = '2_wmus.xlsx'
 
 # Define the job timeout in seconds (6 hours)
-JOB_TIMEOUT = 60
+JOB_TIMEOUT = 2
 
 # Number of CPUS to use for multiprocessing
 NUM_CPUS = mp.cpu_count()
@@ -481,8 +481,8 @@ class AST_FACTORY:
             header = list([row for row in ws.iter_rows(min_row=1, max_col=None, values_only=True)][0])
             ast_condition_index = header.index(self.AST_CONDITION_COLUMN) + 1  # +1 because Excel columns are 1-indexed
 
-            # Calculate the actual row index in Excel, +2 to account for header and 0-index
-            excel_row_index = job_index + 2  
+            # Calculate the actual row index in Excel
+            excel_row_index = job_index + 1  
 
             # Check if the row is blank before updating
             row_values = [ws.cell(row=excel_row_index, column=col).value for col in range(1, len(header) + 1)]
@@ -496,8 +496,8 @@ class AST_FACTORY:
 
             # Save the workbook with the updated condition
             wb.save(self.queuefile)
-            print(f"Updated row {excel_row_index} with condition '{condition}'.")
-            logger.info(f"Updated row {excel_row_index} with condition '{condition}'.")
+            print(f"Updated Job {job_index}, row {excel_row_index} with condition '{condition}'.")
+            logger.info(f"Updated Job {job_index}, row {excel_row_index} with condition '{condition}'.")
 
         except FileNotFoundError as e:
             print(f"Error: Queue file not found - {e}")
@@ -556,8 +556,17 @@ class AST_FACTORY:
     
     def batch_ast_v1(self): 
         """Run all jobs in parallel using multiprocessing. Batch_AST V1"""
-        print("Batching AST V1 with multiprocessing")
+        
+        print("Batching AST with multiprocessing")
+        logger.info("##########################################################################################################################")
+        logger.info("#")
         logger.info("Batching AST with multiprocessing")
+        logger.info("#")
+        logger.info("##########################################################################################################################")
+        
+        global job_index
+
+
 
         # Create a multiprocessing pool
         results = []  # Create an empty list to store results
@@ -568,9 +577,10 @@ class AST_FACTORY:
             print("Starting pool")
 
             # Loop through each job and apply it asynchronously using the pool
-            for job in self.jobs:
-                print(f"Starting job {job}")
-                logger.info(f"Starting job {job}")
+            for index, job in enumerate(self.jobs):
+                job_index = index + 1
+                print(f"Inside Pool - Starting job {job_index}")
+                logger.info(f"Inside Pool -Starting job {job_index}")
 
                 # Capture the arcpy messages for each job
                 self.capture_arcpy_messages()
@@ -579,6 +589,11 @@ class AST_FACTORY:
                 start_time = time.perf_counter() 
                 result = pool.apply_async(self.start_ast_tb, ([job],)) 
 
+                if start_time > JOB_TIMEOUT:
+                    print(f"Job {job_index} took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed.")
+                    logger.warning(f"Job {job} took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed.")
+                    self.add_job_result(job_index, 'Failed due to timeout')    
+                
                 # Store both the result and its start time in a tuple
                 results.append((result, start_time))
                 print("Pool Results appended")
@@ -622,7 +637,7 @@ class AST_FACTORY:
                 except Exception as e:
                     duration = time.perf_counter() - start_time
                     print(f"Job failed with error: {e} after {duration:.2f} seconds.")
-                logger.error(f"Job failed with error: {e} after {duration:.2f} seconds.")
+                    logger.error(f"Job failed with error: {e} after {duration:.2f} seconds.")
 
 
 
