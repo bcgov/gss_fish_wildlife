@@ -35,7 +35,7 @@ import concurrent
 excel_file = '2_wmus.xlsx'
 
 # Define the job timeout in seconds (6 hours)
-JOB_TIMEOUT = 2
+JOB_TIMEOUT = 60
 
 # Number of CPUS to use for multiprocessing
 NUM_CPUS = mp.cpu_count()
@@ -527,44 +527,6 @@ class AST_FACTORY:
             print(f"Unexpected error while adding job result: {e}")
             logger.error(f"Unexpected error while adding job result: {e}")
 
-
-    # def batch_ast(self):
-    #     global counter, job_index 
-    #     ''' Executes the loaded jobs'''
-
-    #     counter = 1
-    #     print("Batching AST")
-        
-    #     logger.info("***************************************************************************************************************************")
-    #     logger.info("Batching AST")        
-    #     logger.info("***************************************************************************************************************************")
-    #     number_of_jobs = len(self.jobs)
-    #     print(f"Number of jobs: {number_of_jobs}")
-    #     logger.info(f"Number of jobs: {number_of_jobs}")
-        
-    #     # iterate through the jobs and run the start_ast_tb function on each row of the excel sheet
-    #     for job in self.jobs:
-    #         try:
-    #             print(f"Starting job {counter} of {number_of_jobs}")
-    #             logger.info(f"Starting job {counter} of {number_of_jobs}")
-                
-    #             # Start the Ast Tool
-    #             self.start_ast_tb([job])
-    #             #TODO insert time out function here
-    #             # If the arcpymessage that is returned contains the text "Automated_status_sheet.xlsx is ready for you to use" then the job is complete
-    #             if arcpy.GetMessages(0) == "Automated_status_sheet.xlsx is ready for you to use":
-    #                 self.add_job_result(job_index, 'COMPLETE')
-
-    #                 print(f"AST SUCCESS MESSAGE RECEIVED. Job {counter} COMPLETE")
-    #                 logger.info(f"AST SUCCESS MESSAGE RECEIVED. Job {counter} COMPLETE")
-
-    #         except Exception as e:
-    #             # Log the exception and the job that caused it
-    #             print(f"Error encountered with job {counter}: {e}")
-    #             logger.error(f"Error encountered with job {counter}: {e}")
-    #             self.add_job_result(job_index, 'Failed')
-    #         finally:
-    #             counter += 1
     
     def batch_ast_v1(self): 
         """Run all jobs in parallel using multiprocessing. Batch_AST V1"""
@@ -657,6 +619,8 @@ class AST_FACTORY:
         '''
         Uses multiprocssing to run the NUMBER of JOBs in pool
         '''
+        
+        global job_index
         print("Batching AST with ProcessPoolExecutor")
         logger.info("Batching AST with ProcessPoolExecutor")
         import concurrent.futures
@@ -664,17 +628,31 @@ class AST_FACTORY:
         # Use a ProcessPoolExecutor with the specified number of jobs
         with concurrent.futures.ProcessPoolExecutor(max_workers=NUMBER_OF_JOBS) as executor:
             # Submit each job to the executor and store the future objects in a dictionary
-            futures = {executor.submit(self.start_ast_tb, [job]): job for job in self.jobs}
+            exection_queue = {}  # Create an empty dictionary to store exection_queue and jobs
+            
+            for index, job in enumerate(self.jobs):
+                job_index = index
+                logger.info(f"Starting Timing on job {job_index}")
+                print(f"Starting Timing on job {job_index}")
+                
+                # Capture the arcpy messages for each job
+                self.capture_arcpy_messages()
+                
+                future_job = executor.submit(self.start_ast_tb, [job])  # Submit each job to the executor
+                exection_queue[future_job] = job  # Add the future job and the corresponding job to the dictionary
 
-            for future in concurrent.futures.as_completed(futures):
-                job = futures[future]
+
+            for concurrent_job in concurrent.futures.as_completed(exection_queue):
+                job = exection_queue[concurrent_job]
                 start_time = time.time()
+                logger.info(f"Starting job {job} at {start_time}")
+                print(f"Starting job {job} at {start_time}")
                 try:
                     
                     # Capture the arcpy messages for each job
                     self.capture_arcpy_messages()
                     # Set a timeout to control how long to wait for the job result
-                    future.result(timeout=JOB_TIMEOUT)
+                    concurrent_job.result(timeout=JOB_TIMEOUT)
                     duration = time.time() - start_time
                     print(f"Job {job} completed in {duration:.2f} seconds.")
                     logger.info(f"Job {job} completed in {duration:.2f} seconds.")
@@ -685,7 +663,7 @@ class AST_FACTORY:
                         logger.warning(f"Job {job} took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed.")
                         self.add_job_result(self.jobs.index(job), 'Failed')
 
-                except concurrent.futures.TimeoutError:
+                except concurrent.exection_queue.TimeoutError:
                     duration = time.time() - start_time
                     print(f"Job {job} timed out after {duration:.2f} seconds.")
                     logger.error(f"Job {job} timed out after {duration:.2f} seconds.")
@@ -1024,7 +1002,7 @@ if __name__ == '__main__':
     # load the jobs using the load jobs method. This will scan the excel sheet and assign to "jobs"    
     jobs = ast.load_jobs()
     
-    ast.batch_ast_v1()
+    ast.batch_ast_v2()
     
     # ast.re_load_failed_jobs()
     
