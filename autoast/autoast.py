@@ -638,7 +638,8 @@ class AST_FACTORY:
                 # Capture the arcpy messages for each job
                 self.capture_arcpy_messages()
                 
-                future_job = executor.submit(self.start_ast_tb, [job])  # Submit each job to the executor
+                future_job = executor.submit(self.start_ast_tb, [job]) # Submit each job to the executor
+                logger.info(f"Job {job} submitted to executor")
                 exection_queue[future_job] = job  # Add the future job and the corresponding job to the dictionary
 
 
