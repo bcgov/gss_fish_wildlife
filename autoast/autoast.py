@@ -271,7 +271,7 @@ class AST_FACTORY:
                 for row_index, row_data in enumerate(data, start=2):  # Start from 2 to account for Excel header
                     
                     print(f" INSIDE FOR LOOP row index is {row_index} and row index - 1 is {row_index -1} and row data is {row_data}")
-                    
+                    logger.info(f" INSIDE FOR LOOP row index is {row_index} and row index - 1 is {row_index -1} and row data is {row_data}")
                     # Skip any completely blank rows
                     if all((value is None or str(value).strip() == '') for value in row_data):
                         print(f"Skipping blank row at index {row_index -1 }")
@@ -508,8 +508,8 @@ class AST_FACTORY:
 
             # Save the workbook with the updated condition
             wb.save(self.queuefile)
-            print(f"Updated Job {job_index}, row {excel_row_index} with condition '{condition}'.")
-            logger.info(f"Updated Job {job_index}, row {excel_row_index} with condition '{condition}'.")
+            print(f"Updated Job {job_index +1}, excel row {excel_row_index} with condition '{condition}'.")
+            logger.info(f"Inside Add Jub Result - Updated Job {job_index + 1}, excel row {excel_row_index} with condition '{condition}'.")
 
         except FileNotFoundError as e:
             print(f"Error: Queue file not found - {e}")
@@ -638,8 +638,8 @@ class AST_FACTORY:
                     # Action if job duration exceeds allowed time
                     if duration > JOB_TIMEOUT:
                         print(f"Job took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed for Rebatch.")
-                        logger.warning(f"Job took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed for Rebatch.")
-                        self.add_job_result(job_index, 'Failed1')
+                        logger.warning(f"Inside Batch V1 - Job {job_index +1} took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed for Rebatch.")
+                        self.add_job_result(job_index, 'Failed')
 
                 except TimeoutError:
                     duration = time.perf_counter() - start_time
