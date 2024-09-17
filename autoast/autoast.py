@@ -268,14 +268,14 @@ class AST_FACTORY:
                     data.append(row)
 
                 # Iterate over each row of data; enumerate to keep track of the row number in Excel
-                for row_index, row_data in enumerate(data, start=2):  # Start from 2 to account for Excel header
+                for index, row_data in enumerate(data, start=2):  # Start from 2 to account for Excel header
                     
-                    print(f" INSIDE FOR LOOP row index is {row_index} and row index - 1 is {row_index -1} and row data is {row_data}")
-                    logger.info(f" INSIDE FOR LOOP row index is {row_index} and row index - 1 is {row_index -1} and row data is {row_data}")
+                    print(f" INSIDE FOR LOOP row index is {index} and row index - 1 is {index -1} and row data is {row_data}")
+                    logger.info(f" INSIDE FOR LOOP row index is {index} and row index - 1 is {index -1} and row data is {row_data}")
                     # Skip any completely blank rows
                     if all((value is None or str(value).strip() == '') for value in row_data):
-                        print(f"Skipping blank row at index {row_index -1 }")
-                        logger.info(f"Skipping blank row at index {row_index -1}")
+                        print(f"Skipping blank row at index {index -1 }")
+                        logger.info(f"Skipping blank row at index {index -1}")
                         continue  # Skip this row entirely
 
                     # Initialize a dictionary to store the job's parameters
@@ -292,16 +292,16 @@ class AST_FACTORY:
 
                         # Assign an empty string to any None values
                         value = "" if value is None else value
-                        logger.info(f"Loading Job {row_index -1} - Key: {key}, Value: {value}") #Row index - 1 because Job 1 was being listed as job 2
-                        print(f"Loading Job {row_index -1} - Key: {key}, Value: {value}")
+                        logger.info(f"Loading Job {index -1} - Key: {key}, Value: {value}") #Row index - 1 because Job 1 was being listed as job 2
+                        print(f"Loading Job {index -1} - Key: {key}, Value: {value}")
                         # Assign the value to the job dictionary if the key is not None
                         if key is not None:
                             job[key] = value
 
                     # Skip if marked as "COMPLETE"
                     if ast_condition.upper() == 'COMPLETE':
-                        print(f"Skipping job {row_index - 1} as it is marked COMPLETE.")
-                        logger.info(f"Skipping job {row_index - 1} as it is marked COMPLETE.")
+                        print(f"Skipping job {index - 1} as it is marked COMPLETE.")
+                        logger.info(f"Skipping job {index - 1} as it is marked COMPLETE.")
                         continue  # Skip this job as it's already marked as COMPLETE
 
                     # Check if the ast_condition is None, empty, or not 'COMPLETE'
@@ -309,30 +309,30 @@ class AST_FACTORY:
                         # Assign 'Queued' to the ast_condition and update the job dictionary
                         ast_condition = 'Queued'
                         job[self.AST_CONDITION_COLUMN] = ast_condition
-                        logger.info(f"Loading Jobs - Job {row_index - 1} is {ast_condition}")
+                        logger.info(f"Loading Jobs - Job {index - 1} is {ast_condition}")
 
                         # Immediately update the Excel sheet with the new condition
                         try:
-                            self.add_job_result(row_index - 1, ast_condition)
-                            logger.info(f"Added job condition '{ast_condition}' for job {row_index - 1} to jobs list")
+                            self.add_job_result(index - 1, ast_condition)
+                            logger.info(f"Added job condition '{ast_condition}' for job {index - 1} to jobs list")
                         except Exception as e:
-                            print(f"Error updating Excel sheet at row {row_index}: {e}")
-                            logger.error(f"Error updating Excel sheet at row {row_index}: {e}")
+                            print(f"Error updating Excel sheet at row {index}: {e}")
+                            logger.error(f"Error updating Excel sheet at row {index}: {e}")
                             continue
 
                     # Classify the input type for the job
                     try:
                         self.classify_input_type(job)
-                        print(f"Classifying input type for job {row_index - 1}")
-                        logger.info(f"Classifying input type for job {row_index - 1}")
+                        print(f"Classifying input type for job {index - 1}")
+                        logger.info(f"Classifying input type for job {index - 1}")
                     except Exception as e:
                         print(f"Error classifying input type for job {job}: {e}")
                         logger.error(f"Error classifying input type for job {job}: {e}")
 
                     # Add the job to the jobs list after all checks and processing
                     self.jobs.append(job)
-                    print(f"Job Condition is  ({ast_condition}), adding job: {row_index - 1} to jobs list")
-                    logger.info(f"Job Condition is ({ast_condition}), adding job: {row_index - 1} to jobs list")
+                    print(f"Job Condition is  ({ast_condition}), adding job: {index - 1} to jobs list")
+                    logger.info(f"Job Condition is ({ast_condition}), adding job: {index - 1} to jobs list")
 
 
 
@@ -346,7 +346,7 @@ class AST_FACTORY:
             return self.jobs
 
 
-    def classify_input_type(self, input):
+    def classify_input_type(self):
         ''' If the input file is a .kml it will build the aoi from the kml.
         If it is a .shp it will build the aoi based on the shapefile.
         If it is a shapefile AND a filenumber is present, it will run the FW setup script on the shapefile, writing the appended 
@@ -355,10 +355,7 @@ class AST_FACTORY:
         
         Called inside LOAD JOBS
         '''
-
-
-        
-        for job in self.jobs:                # Check if there is a file path in Feature Layer
+        for index, job in enumerate(self.jobs):                # Check if there is a file path in Feature Layer
             if job.get('feature_layer'):
                 print(f'Feature layer found: {job["feature_layer"]}')
                 logger.info(f'Feature layer found: {job["feature_layer"]}')
@@ -370,6 +367,7 @@ class AST_FACTORY:
                     print(f'Kml found, building AOI from KML')
                     logger.info(f'Kml found, building AOI from KML')
                     job['feature_layer'] = self.build_aoi_from_kml(feature_layer_path)
+                
                 elif feature_layer_path.lower().endswith('.shp'):
                     if job.get('file_number'):
                         print(f"File number found for job {job_index}, running FW setup on shapefile: {feature_layer_path}")
@@ -382,22 +380,36 @@ class AST_FACTORY:
                 else:
                     print(f"Unsupported feature layer format: {feature_layer_path}")
                     logger.warning(f"Job number {job_index} Unsupported feature layer format: {feature_layer_path}")
-                    self.add_job_result(job_index, 'Failed')
-
-
+                    self.add_job_result(index, 'Failed') 
     
-    
-    def start_ast_tb(self, jobs):
-        global job_index, logger
+    def start_ast_tb(self, jobs, job_index):
+        import multiprocessing as mp  # Ensure multiprocessing is imported
+        import logging
+        import os
+        import datetime
+        
+        
+        # global job_index
         '''Starts an AST toolbox from job params. It will check the capitalization of the True or False inputs and 
         change them to appropriate booleans as the script was failing before implementing this.
         It will also create the output directory for the FW Setup Shapefiles, if it does not exist based on the job number. Currently this is being created in the T: drive.
         but should be updated once on the server. It checks to make a sure a region has been input on the excel sheet as this is a required parameter.
         It will also catch any errors that are thrown and print them to the console.'''
+        
+        # Configure logger in worker process
+        print(f"Inside start_ast_tb: Configuring logger in worker process for job {job_index}")
+        log_folder = f'autoast_logs_{datetime.datetime.now().strftime("%Y%m%d")}'
+        if not os.path.exists(log_folder):
+            os.mkdir(log_folder)
+        # Generate a unique log file name per process
+        log_file = os.path.join(log_folder, f'ast_worker_log_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}_{mp.current_process().pid}.log')
+        logging.basicConfig(filename=log_file, 
+                            level=logging.DEBUG, 
+                            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        logger = logging.getLogger(__name__)
+        
+        
         try:
-            if logger is None:
-                logger = setup_logging()
-             
              # Re-import the toolbox in each process
             ast_toolbox = os.getenv('TOOLBOX')  # Get the toolbox path from environment variables
             if ast_toolbox:
@@ -410,7 +422,7 @@ class AST_FACTORY:
 
             
             print("Starting AST Toolbox Worker")
-            logger.info("Starting AST Toolbox Worker")
+            logger.info("Inside start_ast_tb: Starting AST Toolbox Worker")
 
             #DELETE the batch function should loop the spreadsheet and run the start_ast_tb function on each row of the excel sheet
             # Loop over the jobs in the spreadsheet#
@@ -419,9 +431,9 @@ class AST_FACTORY:
                 
                 # Apply a separator line between each job in the log file
                 
-                logger.info(f"===================================================================")
+                logger.info("=" * 67)
                 logger.info(f"======================= Starting Job #: {job} ======================")
-                logger.info(f"====================================================================")
+                logger.info("=" * 67)
                 try:
                     # Convert 'true'/'false' strings to booleans (For some reason the script was reading them all as lowercase strings)
                     for param in self.AST_PARAMETERS.values():
@@ -439,8 +451,8 @@ class AST_FACTORY:
                     logger.info(f"Job Parameters are: {params}")
                     arcpy.MakeAutomatedStatusSpreadsheet_ast(*params)
                     
-
-                    job_index = self.jobs.index(job)
+                    #DELETE
+                    # job_index = self.jobs.index(job)
 
                     self.add_job_result(job_index, 'COMPLETE')
 
@@ -614,13 +626,12 @@ class AST_FACTORY:
                     logger.error(f"Job failed with error: {e} after {duration:.2f} seconds.")
 
 
-
     def batch_ast_v2(self):
         '''
         Uses multiprocessing to run the NUMBER_OF_JOBS in parallel.
         '''
         
-        global job_index
+        # global job_index
         print("Batching AST with ProcessPoolExecutor")
         logger.info("Batching AST with ProcessPoolExecutor")
         import concurrent.futures
@@ -640,7 +651,8 @@ class AST_FACTORY:
                 
                 start_time = time.time()
                 # Submit each job to the executor
-                future = executor.submit(self.start_ast_tb, [job])
+                future = executor.submit(self.start_ast_tb, [job], index)
+
                 logger.info(f"Job {job} submitted to executor at time {start_time}")
                 print(f"Job {job} submitted to executor at time {start_time}")
                 futures_dict[future] = job
@@ -690,7 +702,7 @@ class AST_FACTORY:
         logger.info(f"Number of failed jobs: {len(self.jobs)}")
         
         # iterate through the jobs and run the start_ast_tb function on each row of the excel sheet
-        for job in self.jobs:
+        for index, job in enumerate(self.jobs):
             try:
                 print(f"Starting job {counter}")
                 logger.info(f"Starting job {counter}")
@@ -699,18 +711,18 @@ class AST_FACTORY:
                 self.start_ast_tb([job])
                 print(f"Job {counter} COMPLETE")
                 logger.info(f"Job {counter} COMPLETE")
-                self.add_job_result(job_index, 'COMPLETE')
+                self.add_job_result(index, 'COMPLETE')
 
             except Exception as e:
                 # Log the exception and the job that caused it
                 print(f"Error encountered with job {counter}: {e}")
                 logger.error(f"Error encountered with job {counter}: {e}")
-                self.add_job_result(job_index, 'Failed')
+                self.add_job_result(index, 'Failed')
             finally:
                 counter += 1
 
     def re_load_failed_jobs(self):
-        global job_index
+        # global job_index
 
         print("Loading Failed jobs")
         logger.info("Loading Failed jobs")
