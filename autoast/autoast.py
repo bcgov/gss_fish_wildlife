@@ -617,7 +617,7 @@ class AST_FACTORY:
 
     def batch_ast_v2(self):
         '''
-        Uses multiprocssing to run the NUMBER of JOBs in pool
+        Uses multiprocessing to run the NUMBER_OF_JOBS in parallel.
         '''
         
         global job_index
@@ -625,11 +625,11 @@ class AST_FACTORY:
         logger.info("Batching AST with ProcessPoolExecutor")
         import concurrent.futures
         import time
+
         # Use a ProcessPoolExecutor with the specified number of jobs
         with concurrent.futures.ProcessPoolExecutor(max_workers=NUMBER_OF_JOBS) as executor:
-            # Submit each job to the executor and store the future objects in a dictionary
-            exection_queue = {}  # Create an empty dictionary to store exection_queue and jobs
-            
+            futures_dict = {}
+            start_times = {}
             for index, job in enumerate(self.jobs):
                 job_index = index
                 logger.info(f"Starting Timing on job {job_index}")
@@ -638,22 +638,21 @@ class AST_FACTORY:
                 # Capture the arcpy messages for each job
                 self.capture_arcpy_messages()
                 
-                future_job = executor.submit(self.start_ast_tb, [job]) # Submit each job to the executor
-                logger.info(f"Job {job} submitted to executor")
-                exection_queue[future_job] = job  # Add the future job and the corresponding job to the dictionary
-
-
-            for concurrent_job in concurrent.futures.as_completed(exection_queue):
-                job = exection_queue[concurrent_job]
                 start_time = time.time()
-                logger.info(f"Starting job {job} at {start_time}")
-                print(f"Starting job {job} at {start_time}")
+                # Submit each job to the executor
+                future = executor.submit(self.start_ast_tb, [job])
+                logger.info(f"Job {job} submitted to executor at time {start_time}")
+                print(f"Job {job} submitted to executor at time {start_time}")
+                futures_dict[future] = job
+                start_times[future] = start_time
+
+            # Process the results as they complete
+            for future in concurrent.futures.as_completed(futures_dict.keys()):
+                job = futures_dict[future]
+                start_time = start_times[future]
                 try:
-                    
-                    # Capture the arcpy messages for each job
-                    self.capture_arcpy_messages()
                     # Set a timeout to control how long to wait for the job result
-                    concurrent_job.result(timeout=JOB_TIMEOUT)
+                    result = future.result(timeout=JOB_TIMEOUT)
                     duration = time.time() - start_time
                     print(f"Job {job} completed in {duration:.2f} seconds.")
                     logger.info(f"Job {job} completed in {duration:.2f} seconds.")
@@ -664,7 +663,7 @@ class AST_FACTORY:
                         logger.warning(f"Job {job} took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed.")
                         self.add_job_result(self.jobs.index(job), 'Failed')
 
-                except concurrent.exection_queue.TimeoutError:
+                except concurrent.futures.TimeoutError:
                     duration = time.time() - start_time
                     print(f"Job {job} timed out after {duration:.2f} seconds.")
                     logger.error(f"Job {job} timed out after {duration:.2f} seconds.")
@@ -675,15 +674,7 @@ class AST_FACTORY:
                     print(f"Job {job} failed with error: {e} after {duration:.2f} seconds.")
                     logger.error(f"Job {job} failed with error: {e} after {duration:.2f} seconds.")
                     self.add_job_result(self.jobs.index(job), 'Failed due to Error')
-
-    
-    
-    # def run_worker():
-    #     # Simulate the worker's job directly
-    #     for each_job in jobs:
-    #         print("Running a job")
-    #         batch_ast()
-         
+        
             
     def re_batch_failed_ast(self):
         global counter
@@ -717,8 +708,6 @@ class AST_FACTORY:
                 self.add_job_result(job_index, 'Failed')
             finally:
                 counter += 1
-
-
 
     def re_load_failed_jobs(self):
         global job_index
