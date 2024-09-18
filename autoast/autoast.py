@@ -35,7 +35,7 @@ import concurrent
 excel_file = '2_wmus.xlsx'
 
 # Define the job timeout in seconds (6 hours)
-JOB_TIMEOUT = 60
+JOB_TIMEOUT = 2
 
 # Number of CPUS to use for multiprocessing
 NUM_CPUS = mp.cpu_count()
@@ -346,7 +346,7 @@ class AST_FACTORY:
             return self.jobs
 
 
-    def classify_input_type(self):
+    def classify_input_type(self, job):
         ''' If the input file is a .kml it will build the aoi from the kml.
         If it is a .shp it will build the aoi based on the shapefile.
         If it is a shapefile AND a filenumber is present, it will run the FW setup script on the shapefile, writing the appended 
@@ -397,7 +397,7 @@ class AST_FACTORY:
         It will also catch any errors that are thrown and print them to the console.'''
         
         # Configure logger in worker process
-        print(f"Inside start_ast_tb: Configuring logger in worker process for job {job_index}")
+        print(f"Inside start_ast_tb: Configuring logger in worker process for job {job_index + 1}")
         log_folder = f'autoast_logs_{datetime.datetime.now().strftime("%Y%m%d")}'
         if not os.path.exists(log_folder):
             os.mkdir(log_folder)
@@ -450,9 +450,7 @@ class AST_FACTORY:
                     print(f"Job Parameters are: {params}")
                     logger.info(f"Job Parameters are: {params}")
                     arcpy.MakeAutomatedStatusSpreadsheet_ast(*params)
-                    
-                    #DELETE
-                    # job_index = self.jobs.index(job)
+
 
                     self.add_job_result(job_index, 'COMPLETE')
 
