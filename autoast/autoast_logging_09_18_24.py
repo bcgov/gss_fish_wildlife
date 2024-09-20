@@ -43,9 +43,12 @@ NUM_CPUS = mp.cpu_count()
 NUMBER_OF_JOBS = 4
 
 # Set up Global Functions
-###############################################################################################################################################################################
-# Set up logging
 
+###############################################################################################################################################################################
+#
+# Set up logging
+#
+###############################################################################################################################################################################
 def setup_logging():
     ''' Set up logging for the script '''
     # Create the log folder filename
@@ -209,7 +212,7 @@ class AST_FACTORY:
             self.queuefile = queuefile
             self.jobs = []
             self.logger = logger or logging.getLogger(__name__)
-            self.current_path = current_path  # Add current_path attribute
+            self.current_path = current_path  
 
     def load_jobs(self):
         '''
@@ -337,16 +340,23 @@ class AST_FACTORY:
         # Process the job passed as an argument
         if job.get('feature_layer'):
             print(f'Feature layer found: {job["feature_layer"]}')
-            self.logger.info(f'Feature layer found: {job["feature_layer"]}')
+            self.logger.info(f'Classifying Input Type: Feature layer found: {job["feature_layer"]}')
+            
+            # Assign the feature layer path to a variable
             feature_layer_path = job['feature_layer']
             print(f"Processing feature layer: {feature_layer_path}")
-            self.logger.info(f"Processing feature layer: {feature_layer_path}")
+            self.logger.info(f"Clasifying Input Type: Processing feature layer: {feature_layer_path}")
 
+            # If feature layer ends with KML run build_aoi_from_kml
             if feature_layer_path.lower().endswith('.kml'):
                 print(f'Kml found, building AOI from KML')
                 self.logger.info(f'Kml found, building AOI from KML')
                 job['feature_layer'] = self.build_aoi_from_kml(feature_layer_path)
             
+            
+            # If the feature layer ends with .shp, check if the file number has been entered. If the file number has been entered,
+            # run the FW Setup script on the shapefile and write the appended shapefile to an output directory based on the file number
+            # then assign the appended shapefile path to the feature layer
             elif feature_layer_path.lower().endswith('.shp'):
                 if job.get('file_number'):
                     print(f"File number found, running FW setup on shapefile: {feature_layer_path}")
@@ -432,6 +442,8 @@ class AST_FACTORY:
         with concurrent.futures.ProcessPoolExecutor(max_workers=NUMBER_OF_JOBS) as executor:
             futures_dict = {}
             start_times = {}
+            
+            # Submit each job to the executor
             for index, job in enumerate(self.jobs):
                 self.logger.info(f"Inside batch_vst_v2: Starting Timing on job {index}")
                 print(f"Inside batch_vst_v2: Starting Timing on job {index}")
@@ -439,13 +451,17 @@ class AST_FACTORY:
                 # Capture the arcpy messages for each job
                 self.capture_arcpy_messages()
                 
+                # Capture the start time for each job
                 start_time = time.time()
+                
                 # Submit each job to the executor
                 future = executor.submit(process_job, self, job, index, self.current_path)
 
 
                 self.logger.info(f"Inside batch_vst_v2: Job {job} submitted to executor at time {start_time}")
                 print(f"Inside batch_vst_v2: Job {job} submitted to executor at time {start_time}")
+                
+                # Store the future and the start time
                 futures_dict[future] = (job, index)
                 start_times[future] = start_time
 
@@ -454,29 +470,35 @@ class AST_FACTORY:
                 job, index = futures_dict[future]
                 start_time = start_times[future]
                 try:
-                    # Set a timeout to control how long to wait for the job result
+                    # Set a timeout to raise a TimeoutError if the job takes longer than JOB_TIMEOUT. 
+                    # The job is marked as failed and loop continues to process the next job
+                    
                     result = future.result(timeout=JOB_TIMEOUT)
                     duration = time.time() - start_time
+                    
                     print(f"Inside batch_vst_v2: Job {job} completed in {duration:.2f} seconds.")
                     self.logger.info(f"Inside batch_vst_v2: Job {job} completed in {duration:.2f} seconds.")
+                    self.logger.info(f"Inside batch_vst_v2: Job {index} result: {result}")
+                    
+                    self.add_job_result(index, 'COMPLETE')
                     
                     # If the job exceeds the timeout, take necessary action
-                    if duration > JOB_TIMEOUT:
-                        print(f"Inside batch_vst_v2: Job {job} took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed.")
-                        self.logger.warning(f"Inside batch_vst_v2: Job {job} took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed.")
-                        self.add_job_result(index, 'Failed')
+                    # if duration > JOB_TIMEOUT:
+                    #     print(f"Inside batch_vst_v2: Job {job} took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed.")
+                    #     self.logger.warning(f"Inside batch_vst_v2: Job {job} took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed.")
+                    #     self.add_job_result(index, 'Failed')
 
                 except concurrent.futures.TimeoutError:
                     duration = time.time() - start_time
-                    print(f"Job {job} timed out after {duration:.2f} seconds.")
-                    self.logger.error(f"Job {job} timed out after {duration:.2f} seconds.")
-                    self.add_job_result(index, 'Failed due to Timeout')
+                    print(f"Insde Batch_ast_v2: Job {job} timed out after {duration:.2f} seconds.")
+                    self.logger.error(f"JInsde Batch_ast_v2: ob {job} timed out after {duration:.2f} seconds.")
+                    self.add_job_result(index, 'Failed')
 
                 except Exception as e:
                     duration = time.time() - start_time
-                    print(f"Job {job} failed with error: {e} after {duration:.2f} seconds.")
-                    self.logger.error(f"Job {job} failed with error: {e} after {duration:.2f} seconds.")
-                    self.add_job_result(index, 'Failed due to Error')
+                    print(f"Insde Batch_ast_v2: Job {job} failed with error: {e} after {duration:.2f} seconds.")
+                    self.logger.error(f"Insde Batch_ast_v2: Job {job} failed with error: {e} after {duration:.2f} seconds.")
+                    self.add_job_result(index, 'Failed')
 
     def create_new_queuefile(self):
         '''write a new queuefile with preset header'''
