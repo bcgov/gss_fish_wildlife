@@ -1,0 +1,382 @@
+import arcpy
+import os
+
+import arcpy.management
+
+# addded .shp to trapline boundaries export
+# moved the assignment of layout and maps to objects to the top of the script
+# changed variable names so it is easier for others (namely me) to read
+
+# Create or get the feature_layer object from ArcGIS Pro's content pane or the appropriate source
+aprx = arcpy.mp.ArcGISProject("CURRENT")
+
+
+# Define paths for the directories
+workspace = r'\\spatialfiles.bcgov\work\srm\nel\Local\Geomatics\Workarea\SharedWork\Trapline_Territories'
+#kml_dir = r'\\spatialfiles.bcgov\work\srm\nel\Local\Geomatics\Workarea\SharedWork\Trapline_Territories\Kml'
+kml_dir = os.path.join(workspace, 'Kml')
+aprx_dir = os.path.join(workspace, 'Aprx')
+data_dir = os.path.join(workspace, 'Data')
+pdf_dir = os.path.join(workspace, 'pdf')
+
+# Path to the template APRX
+template_aprx_path = r'\\spatialfiles.bcgov\work\srm\nel\Local\Geomatics\Workarea\SharedWork\Trapline_Territories\aprx\Temp_Trapline\Temp_Trapline.aprx'
+
+# Convert main maps and layers to objects early in the script so when others are working in the script, they can scroll to the top and confirm it has been assigned rather
+# than having to search through the script to find where it was assigned.
+
+#NOTE: 
+map_obj = aprx.listMaps('Map')[0]
+layout = aprx.listLayouts("Layout")[0] 
+all_trapline_cabins_obj = map_obj.listLayers("All Trapline Cabins")[0]
+all_trapline_boundaries_obj = map_obj.listLayers("All_Trapline_Boundaries")[0]
+
+
+# Function to create a directory if it doesn't exist
+def create_directory(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+        print(f"Directory created: {directory}")
+    else:
+        print(f"Directory already exists: {directory}")
+
+# Create the main directories
+create_directory(aprx_dir)
+create_directory(data_dir)
+create_directory(pdf_dir)
+
+# Define the feature name (extracted from the query)
+feature_name = 'TR0402T001'
+
+# Create subdirectories named after the feature in each main directory
+aprx_subdir = os.path.join(aprx_dir, feature_name)
+data_subdir = os.path.join(data_dir, feature_name)
+pdf_subdir = os.path.join(pdf_dir, feature_name)
+
+create_directory(aprx_subdir)
+create_directory(data_subdir)
+#create_directory(pdf_subdir)
+
+
+
+# Set up workspace and environment
+arcpy.env.workspace = workspace
+arcpy.env.overwriteOutput = True
+
+# Specify the special layer you want to export features from
+trapline_boundary_path = os.path.join(data_dir, 'Scripting Data', 'Trapline_Boundaries_Export.shp')
+print(f"Trapline boundary path: {trapline_boundary_path}")
+
+# Specify the output file path for the exported feature
+traplineApp_output_fc = os.path.join(data_subdir, f'{feature_name}.shp')
+print(f"Output feature path: {traplineApp_output_fc}")
+
+
+# Create a query to select the first feature
+query = f"TRAPLINE_1 = '{feature_name}'"  # Adjust this query based on the field you're using to identify features
+
+print("Query:", query)  # Print the query for debugging purposes
+
+#NOTE 
+#Put in a check here to see if Def query has 0 records or more than one record.
+
+
+# Create a feature layer to select the specific feature
+try:
+    arcpy.MakeFeatureLayer_management(trapline_boundary_path, "temp_layer", query) # Make feature layer always creates a temporary layer. Its held in memory and will be deleted upon exit. 
+except arcpy.ExecuteError as e:
+    print("MakeFeatureLayer_management error:", e)
+    exit()  # Exit the script if there's an error
+
+# Check if the temporary layer exists
+if arcpy.Exists("temp_layer"):
+    try:
+        
+        arcpy.CopyFeatures_management("temp_layer", traplineApp_output_fc) # Layer has been created (No longer just a path)
+        print("Export process complete.")
+    except arcpy.ExecuteError as e:
+        print("CopyFeatures_management error:", e)
+else:
+    print("Temporary layer 'temp_layer' does not exist.")
+    exit()
+
+# Add a new field for the area in hectares if it doesn't already exist
+area_field = "Area_ha"
+if area_field not in [f.name for f in arcpy.ListFields(traplineApp_output_fc)]:
+    arcpy.AddField_management(traplineApp_output_fc, area_field, "DOUBLE")
+    print(f"Field '{area_field}' added to the feature class.")
+
+
+# Define the function to calculate area in hectares
+def calculate_area_in_hectares(geometry):
+    area_sq_meters = geometry.area  # Area in square meters
+    return area_sq_meters / 10000  # Convert to hectares
+
+# Calculate the area for each polygon and update the new field
+with arcpy.da.UpdateCursor(traplineApp_output_fc, ["SHAPE@", area_field]) as cursor:
+    for row in cursor:
+        area_hectares = calculate_area_in_hectares(row[0])
+        row[1] = area_hectares  # Update the field with the area in hectares
+        cursor.updateRow(row)
+
+        # Format the area to two decimal points
+        formatted_area = f"{area_hectares:.2f} ha."
+        print(f"Formatted area: {formatted_area}")
+
+print(f"Area in hectares has been added to the field '{area_field}'.")
+
+#  Export the feature layer to KML and save it in the corresponding feature's subdirectory
+kml_output = os.path.join(kml_dir, f'{feature_name}.kml')
+
+# Convert the feature layer to KML
+try:
+    arcpy.LayerToKML_conversion("temp_layer", kml_output)
+    print(f"KML file created at: {kml_output}")
+except arcpy.ExecuteError as e:
+    print(f"Error exporting to KML: {e}")
+
+
+
+# Ensure there are maps and layouts in the template project
+#NOTE commented out, not sure if this is necessary we know the map and layout are in the project. Just trying to speed things up bit. Can always uncomment if needed.
+# if not map_obj:
+#     raise ValueError("No maps found in the project.")
+# if not layout:
+#     raise ValueError("No layouts found in the project.")
+
+# Add the output feature to the map
+# NOTE Commented this out, we dont really need to add the feature to the map as we will update the data source and then remove the layer anyway
+# trapline_app_layer = map_obj.addDataFromPath(traplineApp_output_fc) # "Map Layer" now an object in PYTHON (Officially a layer in the map)
+# print(f"added to contents pane: {trapline_app_layer.name}")  # Check that map_layer has been added to contents 
+
+#NOTE This can be removed as we can rename the layers lower down in the script
+# Update the feature layer name in the content pane
+# new_layer_name = f"{feature_name} ({formatted_area})"
+# trapline_app_layer.name = new_layer_name
+# print(f"Updated feature layer name: {trapline_app_layer.name}.... will now add it to the contents pane")
+
+#NOTE Removed this check of the layer name, if you want to use it, it needs to be moved to the bottom after we rename the layer
+# # Verify the updated TB layer name
+# layer_updated = False
+# for lyr in map_obj.listLayers():
+#     if lyr.name == new_boundaries_layer_name:
+#         layer_updated = True
+#         print(f"{lyr.name} successfully added to contents pane -:) ")
+# if not layer_updated:
+#     print(f"Layer name update failed. Current layers: {[lyr.name for lyr in map_obj.listLayers()]}")
+
+# Specify the "Trapline Cabins" layer name
+trapline_cabins_layer = os.path.join(data_dir, 'TRAPLINE_CABINS_Polygon.shp')
+clipped_cabins_output = os.path.join(data_subdir, f'{feature_name}_Cabins.shp')
+
+# Clip the "Trapline Cabins" layer based on the feature layer
+arcpy.analysis.Clip(trapline_cabins_layer, traplineApp_output_fc, clipped_cabins_output)  # After the clip, the clipped cabins output path has now become a layer
+
+print(f"Clipping of trapline boundary to Crown Lands layer completed. --> f'{feature_name}_Cabins.shp' was added to contents pane")
+
+#Check to see if CROWN_LAND field exists and if it is None or empty; if it does exist create new_crown_cabins_str as a feature layer.  
+crown_land_field = "CROWN_LAND"  # Assuming this field exists
+if crown_land_field not in [f.name for f in arcpy.ListFields(clipped_cabins_output)]:
+    print(f"{crown_land_field} no found in attribute table.")
+
+else:
+        # Update the names of the resulting clipped cabins based on the CROWN_LAND field
+    with arcpy.da.UpdateCursor(clipped_cabins_output, [crown_land_field]) as cursor:
+        for row in cursor:
+            if row[0]:  # Check if CROWN_LAND field is not None or empty
+                crown_num = f"{row[0]}"
+                print(f"Crown land number is {crown_num}")
+                #NOTE deleted the cursor after it has completed its task
+                del cursor  
+
+#NOTE could change this to crown_num
+new_crown_cabins_str = f"{feature_name}_Cabins_{crown_num}" # Here we are only assigning a string of letter and numbers to a variable 
+print(f"New Crown cabins variable: {new_crown_cabins_str} created.")
+
+# #NOTE added the .shp to the end of the file name
+# NOTE add a check before this so create feature class doesnt occur when the query returns nothing
+# arcpy.management.CreateFeatureclass(data_subdir, f"{new_crown_cabins_str}.shp")  #Here we are creating feature class for new_crown_cabins_str
+
+#NOTE could assign create feature class to new variable so its not called .str  not really necessary though
+print (f"{new_crown_cabins_str} feature class created in {data_subdir}. ")
+
+# Find the text element (Text 6) and update its text to the feature name
+text_updated = False
+#NOTE no need to search for the layout again as we already assigned it to a python object at the top
+#NOTE changed text6 to Map Title to match the name of the element in the layout
+# for lyt in aprx.listLayouts("Layout"):
+for elm in layout.listElements("TEXT_ELEMENT"):
+    if elm.name == "Map Title":
+        elm.text = f"Trapline {feature_name}"
+        print("\tProponent text element changed")
+
+#NOTE We dont want to save the Aprx file because we will be changing the names of the layers in the contents and then it wont work next time
+# Save the project to preserve changes
+# aprx.saveACopy(os.path.join(aprx_subdir, f'{feature_name}.aprx'))
+
+
+#NOTE we need to remove permit_dir from the function and add it to the function as a parameter, also need to replace TR0xxxx001 with feature name
+def update_layer_sources(layer_to_update):
+    '''
+    Update the data sources for the pending application and poc_pot layers
+    '''
+
+    print("Function 1: Updating Layer Sources...")
+
+    # Set the layer to be updated
+    pending_application_layer = map_obj.listLayers(layer_to_update)[0]
+    orig_lyr = pending_application_layer
+
+    # Check to make sure the layer exists
+    if not orig_lyr:
+        raise ValueError("\tLayer not found")
+    else:
+        print(f"\tLayer found: {orig_lyr.name}")
+
+    permit_dir = r"W:\srm\nel\Local\Geomatics\Workarea\SharedWork\Trapline_Territories\Data\TR0402T001"
+
+    new_conn_dict = {
+        'connection_info': {'database': permit_dir}, # This is the path to the folder where the new data source is located
+        'dataset': 'TR0402T001_Cabins.shp', # This has to be the file name including the .shp
+        'workspace_factory': 'Shape File' # This is the type of file you are connecting to (needs the space)
+    }
+    arcpy.AddMessage(f"\tNew connection properties created: {new_conn_dict}")
+
+    # Update the connection properties
+    new_conn_prop = orig_lyr.updateConnectionProperties(orig_lyr.connectionProperties, new_conn_dict)
+    print(f"\tData source updated for layer new connection properties are now: {new_conn_prop}")
+    
+update_layer_sources("All Trapline Cabins")
+print("1st Layer source updated")
+
+
+
+#NOTE
+# Exported all Trapline Boundaries to a shapefile, changed the name of the BCGW layer to "Trapline Boundaries BCGW" so there arent two layers with the same name
+
+
+#NOTE we need to remove permit_dir from the function and add it to the function as a parameter, also need to replace TR0xxxx001 with feature name
+def update_layer_sources(layer_to_update):
+
+    print("Function 2 Updating Layer Sources...")
+
+    # Set the layer to be updated
+    pending_application_layer = map_obj.listLayers(layer_to_update)[0]
+    orig_lyr = pending_application_layer
+
+    # Check to make sure the layer exists
+    if not orig_lyr:
+        raise ValueError("\t all trapline boundary Layer not found")
+    else:
+        arcpy.AddMessage(f"\tLayer found: {orig_lyr.name}")
+        print(f"\t Function 2: ALl trapline boundaries Layer found: {orig_lyr.name}")
+    permit_dir = r"W:\srm\nel\Local\Geomatics\Workarea\SharedWork\Trapline_Territories\Data\TR0402T001"
+
+    new_conn_dict = {
+        'connection_info': {'database': permit_dir}, # This is the path to the folder where the new data source is located
+        'dataset': 'TR0402T001.shp', # This has to be the file name including the .shp
+        'workspace_factory': 'Shape File' # This is the type of file you are connecting to (needs the space)
+    }
+    print(f"\tNew connection properties created: {new_conn_dict}")
+
+    # Update the connection properties
+    new_conn_prop = orig_lyr.updateConnectionProperties(orig_lyr.connectionProperties, new_conn_dict)
+    print(f"\tData source updated for layer new connection properties are now: {new_conn_prop}")
+    
+update_layer_sources("All_Trapline_Boundaries")
+print("Layer sources updated")
+
+
+
+
+
+
+
+
+
+
+
+#remove temp_layer from contents pane
+temp_layer_obj = map_obj.listLayers("temp_Layer")[0]
+arcpy.management.Delete(temp_layer_obj)
+print("temp_layer has been removed from contents pane")
+
+#remove trapline boundary "feature name" layer from contents pane
+feature_name_obj = map_obj.listLayers(f'{feature_name}')[0]
+arcpy.management.Delete(feature_name_obj)
+print("Feature name layer has been removed from contents pane")
+
+#remove trapline boundary "feature name" layer from contents pane
+feature_name_cabins_obj = map_obj.listLayers(f'{feature_name}_Cabins')[0]
+arcpy.management.Delete(feature_name_cabins_obj)
+print("clipped cabins output layer has been removed from contents pane")
+
+new_cabins_layer_name = f'Trapline Cabin {feature_name}'
+all_trapline_cabins_obj.name = new_cabins_layer_name
+
+new_boundaries_layer_name = f"{feature_name} ({formatted_area})"
+all_trapline_boundaries_obj.name = new_boundaries_layer_name
+
+def zoom_to_feature_extent(map_name, map_frame, layer_name, zoom_factor, layout_name):
+
+
+            ''' This function will focus the layout on the selected feature and then pan out x% (depending on zoom factor) 
+            to show the surrounding area. If you use an 0.8 (80%) Zoom Factor, to calculate the zoom percentage: Original zoom 
+            is 100% (the initial extent of the splitline layer).The new extent is 160% larger than the original. This is because 
+            you are adding 80% of the width to both sides (left and right) and 80% of the height to both top and bottom.
+            map_name - enter map name as a string "Map"
+            map_frame - enter map frame name as a string "Map Frame"
+            layer_name - enter layer name as a string "f'Trapline Cabin {feature_name}"
+            zoom_factor - adjustable number = the percentage of surroung around your layer. 01 = 20%, 0.8 = 80% more area around your feature (smaller scale)
+            layout_name - enter layout name as a string "Layout"
+            '''
+                
+            print("Running zoom_to_feature_extent function....")
+            # Verify layout existence
+            layouts = aprx.listLayouts(layout_name)
+            if not layouts:
+                print(f"No layout found with the name: {layout_name}")
+                return
+            lyt_name = layouts[0]
+
+            # Verify map frame existence
+            map_frames = lyt_name.listElements("MAPFRAME_ELEMENT", map_frame)
+            if not map_frames:
+                arcpy.AddError(f"No map frame found with the name: {map_frame} in layout: {layout_name}")
+                return
+            mf = map_frames[0]
+
+            # Verify layer existence
+            maps = aprx.listMaps(map_name)
+            if not maps:
+                print(f"No map found with the name: {map_name}")
+                print(f"No map found with the name: {map_name}")
+                
+                return
+            map_obj = maps[0]
+            layers = map_obj.listLayers(layer_name)
+            if not layers:
+                print(f"No layer found with the name: {layer_name} in map: {map_name}")
+                print(f"\tNo layer found with the name: {layer_name} in map: {map_name}")
+                
+                return
+            lyr_name = layers[0]
+
+            # Get and adjust the extent
+            try:
+                current_extent = mf.getLayerExtent(lyr_name, False, True)
+                x_min = current_extent.XMin - (current_extent.width * zoom_factor)
+                y_min = current_extent.YMin - (current_extent.height * zoom_factor)
+                x_max = current_extent.XMax + (current_extent.width * zoom_factor)
+                y_max = current_extent.YMax + (current_extent.height * zoom_factor)
+                new_extent = arcpy.Extent(x_min, y_min, x_max, y_max)
+                mf.camera.setExtent(new_extent)
+                
+                print(f"\tZoomed to {layer_name} with zoom factor {zoom_factor}")
+                print("Zoom to Feature Extent Completed")
+                
+            except Exception as e:
+                arcpy.AddError(f"Error in zooming to extent: {str(e)}")
+                
+#Call the Zoom the mapframe to the extent of the application - ** Lighting the firecracker
+zoom_to_feature_extent("Map", "Map Frame", f"Trapline Cabin {feature_name}", 0.1, "Layout")
