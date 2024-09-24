@@ -34,7 +34,7 @@ import concurrent.futures
 excel_file = '2_wmus.xlsx'
 
 # Define the job timeout in seconds (6 hours)
-JOB_TIMEOUT = 21600
+JOB_TIMEOUT = 180
 
 # Number of CPUS to use for multiprocessing
 NUM_CPUS = mp.cpu_count()
@@ -115,6 +115,7 @@ def import_ast(logger):
 #
 ###############################################################################################################################################################################
 def setup_bcgw(logger):
+    
     # Get the secret file containing the database credentials
     SECRET_FILE = os.getenv('SECRET_FILE')
 
