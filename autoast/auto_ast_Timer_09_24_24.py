@@ -28,13 +28,12 @@ import multiprocessing as mp
 from tqdm import tqdm
 import sys
 import time
-import concurrent.futures
 
 ## *** INPUT YOUR EXCEL FILE NAME HERE ***
 excel_file = '2_wmus.xlsx'
 
-# Define the job timeout in seconds (6 hours)
-JOB_TIMEOUT = 180
+# Define the job timeout in seconds (e.g., 6 hours)
+JOB_TIMEOUT = 60  # Adjust as needed
 
 # Number of CPUS to use for multiprocessing
 NUM_CPUS = mp.cpu_count()
@@ -115,7 +114,6 @@ def import_ast(logger):
 #
 ###############################################################################################################################################################################
 def setup_bcgw(logger):
-    
     # Get the secret file containing the database credentials
     SECRET_FILE = os.getenv('SECRET_FILE')
 
@@ -216,118 +214,118 @@ class AST_FACTORY:
             self.current_path = current_path  
 
     def load_jobs(self):
-        '''
-        load jobs will check for the existence of the queuefile, if it exists it will load the jobs from the queuefile. Checking if they 
-        are Complete and if not, it will add them to the jobs list as Queued
-        '''
-        # NOTE pass job index into load jobs function
-        global job_index
+            '''
+            load jobs will check for the existence of the queuefile, if it exists it will load the jobs from the queuefile. Checking if they 
+            are Complete and if not, it will add them to the jobs list as Queued
+            '''
+            # NOTE pass job index into load jobs function
+            global job_index
 
-        print("Loading jobs")
-        self.logger.info("Loading jobs")
+            print("Loading jobs")
+            self.logger.info("Loading jobs")
 
-        # Initialize the jobs list to store jobs
-        self.jobs = []
+            # Initialize the jobs list to store jobs
+            self.jobs = []
 
-        # Check if the queue file exists
-        assert os.path.exists(self.queuefile), "Queue file does not exist"
-        if os.path.exists(self.queuefile):
+            # Check if the queue file exists
+            assert os.path.exists(self.queuefile), "Queue file does not exist"
+            if os.path.exists(self.queuefile):
 
-            try:
-                # Open the Excel workbook and select the correct sheet
-                wb = load_workbook(filename=self.queuefile)
-                ws = wb[self.XLSX_SHEET_NAME]
-                print(f'Workbook loaded is {wb}')   
-                self.logger.info(f'Workbook loaded is {wb}') 
-                
-                # Get the header (column names) from the first row of the sheet
-                header = list([row for row in ws.iter_rows(min_row=1, max_col=None, values_only=True)][0])
-                print(f"Header is {header}")
-                self.logger.info(f"Header is {header}")
-                
-                # Read all the data rows (starting from the second row to skip the header)
-                data = []
-                for row in ws.iter_rows(min_row=2, max_col=None, values_only=True):
-                    print(f'Row is {row}')
-                    self.logger.info(f'Row is {row}')
-                    data.append(row)
-
-                # Iterate over each row of data; enumerate to keep track of the row number in Excel
-                for index, row_data in enumerate(data, start=2):  # Start from 2 to account for Excel header
+                try:
+                    # Open the Excel workbook and select the correct sheet
+                    wb = load_workbook(filename=self.queuefile)
+                    ws = wb[self.XLSX_SHEET_NAME]
+                    print(f'Workbook loaded is {wb}')   
+                    self.logger.info(f'Workbook loaded is {wb}') 
                     
-                    print(f" INSIDE FOR LOOP row index is {index} and row index - 1 is {index -1} and row data is {row_data}")
-                    self.logger.info(f" INSIDE FOR LOOP row index is {index} and row index - 1 is {index -1} and row data is {row_data}")
-                    # Skip any completely blank rows
-                    if all((value is None or str(value).strip() == '') for value in row_data):
-                        print(f"Skipping blank row at index {index -1 }")
-                        self.logger.info(f"Skipping blank row at index {index -1}")
-                        continue  # Skip this row entirely
+                    # Get the header (column names) from the first row of the sheet
+                    header = list([row for row in ws.iter_rows(min_row=1, max_col=None, values_only=True)][0])
+                    print(f"Header is {header}")
+                    self.logger.info(f"Header is {header}")
+                    
+                    # Read all the data rows (starting from the second row to skip the header)
+                    data = []
+                    for row in ws.iter_rows(min_row=2, max_col=None, values_only=True):
+                        print(f'Row is {row}')
+                        self.logger.info(f'Row is {row}')
+                        data.append(row)
 
-                    # Initialize a dictionary to store the job's parameters
-                    job = {}
-                    self.logger.info('Creating job dictionary')
-                    ast_condition = None  # Initialize the ast_condition for the current row
+                    # Iterate over each row of data; enumerate to keep track of the row number in Excel
+                    for index, row_data in enumerate(data, start=2):  # Start from 2 to account for Excel header
+                        
+                        print(f" INSIDE FOR LOOP row index is {index} and row index - 1 is {index -1} and row data is {row_data}")
+                        self.logger.info(f" INSIDE FOR LOOP row index is {index} and row index - 1 is {index -1} and row data is {row_data}")
+                        # Skip any completely blank rows
+                        if all((value is None or str(value).strip() == '') for value in row_data):
+                            print(f"Skipping blank row at index {index -1 }")
+                            self.logger.info(f"Skipping blank row at index {index -1}")
+                            continue  # Skip this row entirely
 
-                    # Loop through each column header and corresponding value in the current row
-                    for key, value in zip(header, row_data):
-                        # Check if the key corresponds to the ast_condition column
-                        if key is not None and key.lower() == self.AST_CONDITION_COLUMN.lower():
-                            ast_condition = value if value is not None else ""
-                            print(f"Inside for loop key value in zip - AST Condition is {ast_condition}")
+                        # Initialize a dictionary to store the job's parameters
+                        job = {}
+                        self.logger.info('Creating job dictionary')
+                        ast_condition = None  # Initialize the ast_condition for the current row
 
-                        # Assign an empty string to any None values
-                        value = "" if value is None else value
-                        self.logger.info(f"Loading Job {index -1} - Key: {key}, Value: {value}") #Row index - 1 because Job 1 was being listed as job 2
-                        print(f"Loading Job {index -1} - Key: {key}, Value: {value}")
-                        # Assign the value to the job dictionary if the key is not None
-                        if key is not None:
-                            job[key] = value
+                        # Loop through each column header and corresponding value in the current row
+                        for key, value in zip(header, row_data):
+                            # Check if the key corresponds to the ast_condition column
+                            if key is not None and key.lower() == self.AST_CONDITION_COLUMN.lower():
+                                ast_condition = value if value is not None else ""
+                                print(f"Inside for loop key value in zip - AST Condition is {ast_condition}")
 
-                    # Skip if marked as "COMPLETE"
-                    if ast_condition.upper() == 'COMPLETE':
-                        print(f"Skipping job {index - 1} as it is marked COMPLETE.")
-                        self.logger.info(f"Skipping job {index - 1} as it is marked COMPLETE.")
-                        continue  # Skip this job as it's already marked as COMPLETE
+                            # Assign an empty string to any None values
+                            value = "" if value is None else value
+                            self.logger.info(f"Loading Job {index -1} - Key: {key}, Value: {value}") #Row index - 1 because Job 1 was being listed as job 2
+                            print(f"Loading Job {index -1} - Key: {key}, Value: {value}")
+                            # Assign the value to the job dictionary if the key is not None
+                            if key is not None:
+                                job[key] = value
 
-                    # Check if the ast_condition is None, empty, or not 'COMPLETE'
-                    if ast_condition is None or ast_condition.strip() == '' or ast_condition.upper() != 'COMPLETE':
-                        # Assign 'Queued' to the ast_condition and update the job dictionary
-                        ast_condition = 'Queued'
-                        job[self.AST_CONDITION_COLUMN] = ast_condition
-                        self.logger.info(f"Loading Jobs - Job {index - 1} is {ast_condition}")
+                        # Skip if marked as "COMPLETE"
+                        if ast_condition.upper() == 'COMPLETE':
+                            print(f"Skipping job {index - 1} as it is marked COMPLETE.")
+                            self.logger.info(f"Skipping job {index - 1} as it is marked COMPLETE.")
+                            continue  # Skip this job as it's already marked as COMPLETE
 
-                        # Immediately update the Excel sheet with the new condition
+                        # Check if the ast_condition is None, empty, or not 'COMPLETE'
+                        if ast_condition is None or ast_condition.strip() == '' or ast_condition.upper() != 'COMPLETE':
+                            # Assign 'Queued' to the ast_condition and update the job dictionary
+                            ast_condition = 'Queued'
+                            job[self.AST_CONDITION_COLUMN] = ast_condition
+                            self.logger.info(f"Loading Jobs - Job {index - 1} is {ast_condition}")
+
+                            # Immediately update the Excel sheet with the new condition
+                            try:
+                                self.add_job_result(index - 1, ast_condition)
+                                self.logger.info(f"Added job condition '{ast_condition}' for job {index - 1} to jobs list")
+                            except Exception as e:
+                                print(f"Error updating Excel sheet at row {index}: {e}")
+                                self.logger.error(f"Error updating Excel sheet at row {index}: {e}")
+                                continue
+
+                        # Classify the input type for the job
                         try:
-                            self.add_job_result(index - 1, ast_condition)
-                            self.logger.info(f"Added job condition '{ast_condition}' for job {index - 1} to jobs list")
+                            self.classify_input_type(job)
+                            print(f"Classifying input type for job {index - 1}")
+                            self.logger.info(f"Classifying input type for job {index - 1}")
                         except Exception as e:
-                            print(f"Error updating Excel sheet at row {index}: {e}")
-                            self.logger.error(f"Error updating Excel sheet at row {index}: {e}")
-                            continue
+                            print(f"Error classifying input type for job {job}: {e}")
+                            self.logger.error(f"Error classifying input type for job {job}: {e}")
 
-                    # Classify the input type for the job
-                    try:
-                        self.classify_input_type(job)
-                        print(f"Classifying input type for job {index - 1}")
-                        self.logger.info(f"Classifying input type for job {index - 1}")
-                    except Exception as e:
-                        print(f"Error classifying input type for job {job}: {e}")
-                        self.logger.error(f"Error classifying input type for job {job}: {e}")
+                        # Add the job to the jobs list after all checks and processing
+                        self.jobs.append(job)
+                        print(f"Job Condition is  ({ast_condition}), adding job: {index - 1} to jobs list")
+                        self.logger.info(f"Job Condition is ({ast_condition}), adding job: {index - 1} to jobs list")
 
-                    # Add the job to the jobs list after all checks and processing
-                    self.jobs.append(job)
-                    print(f"Job Condition is  ({ast_condition}), adding job: {index - 1} to jobs list")
-                    self.logger.info(f"Job Condition is ({ast_condition}), adding job: {index - 1} to jobs list")
+                except FileNotFoundError as e:
+                    print(f"Error: Queue file not found - {e}")
+                    self.logger.error(f"Error: Queue file not found - {e}")
+                except Exception as e:
+                    print(f"Unexpected error loading jobs: {e}")
+                    self.logger.error(f"Unexpected error loading jobs: {e}")
 
-            except FileNotFoundError as e:
-                print(f"Error: Queue file not found - {e}")
-                self.logger.error(f"Error: Queue file not found - {e}")
-            except Exception as e:
-                print(f"Unexpected error loading jobs: {e}")
-                self.logger.error(f"Unexpected error loading jobs: {e}")
-
-            return self.jobs
-
+                return self.jobs
+    
     def classify_input_type(self, job):
         ''' If the input file is a .kml it will build the aoi from the kml.
         If it is a .shp it will build the aoi based on the shapefile.
@@ -434,77 +432,43 @@ class AST_FACTORY:
         '''
         Uses multiprocessing to run the NUMBER_OF_JOBS in parallel.
         '''
-        print("Batching AST with ProcessPoolExecutor")
-        self.logger.info("Batching AST with ProcessPoolExecutor")
-        import concurrent.futures
+        print("Batching AST with multiprocessing.Process")
+        self.logger.info("Batching AST with multiprocessing.Process")
         import time
 
-        # Use a ProcessPoolExecutor with the specified number of jobs
-        with concurrent.futures.ProcessPoolExecutor(max_workers=NUMBER_OF_JOBS) as executor:
-            futures_dict = {}
-            start_times = {}
-            
-            # Submit each job to the executor
-            for index, job in enumerate(self.jobs):
-                self.logger.info(f"Inside batch_vst_v2: Starting Timing on job {index}")
-                print(f"Inside batch_vst_v2: Starting Timing on job {index}")
-                
-                # Capture the arcpy messages for each job
-                self.capture_arcpy_messages()
-                
-                # Capture the start time for each job
-                start_time = time.time()
-                
-                # Submit each job to the executor
-                future = executor.submit(process_job, self, job, index, self.current_path)
+        processes = []
+        manager = mp.Manager()
+        return_dict = manager.dict()
 
+        for index, job in enumerate(self.jobs):
+            self.logger.info(f"Starting job {index}")
+            print(f"Starting job {index}")
 
-                self.logger.info(f"Inside batch_vst_v2: Job {job} submitted to executor at time {start_time}")
-                print(f"Inside batch_vst_v2: Job {job} submitted to executor at time {start_time}")
-                
-                # Store the future and the start time
-                futures_dict[future] = (job, index)
-                start_times[future] = start_time
+            # Start each job in a separate process
+            p = mp.Process(target=process_job_mp, args=(self, job, index, self.current_path, return_dict))
+            processes.append((p, index))
+            p.start()
 
-            # Process the results as they complete
-            for future in concurrent.futures.as_completed(futures_dict.keys()):
-                job, index = futures_dict[future]
-                start_time = start_times[future]
-                try:
-                    # Set a timeout to raise a TimeoutError if the job takes longer than JOB_TIMEOUT. 
-                    # The job is marked as failed and loop continues to process the next job
-                    
-                    result = future.result(timeout=JOB_TIMEOUT)
-                    print(f'Inside batch_vst_v2 -for futures loop: Job {job} completed with result: {result}')
-                    logger.info(f'Inside batch_vst_v2 -for futures loop: Job {job} completed with result: {result}')
-                    duration = time.time() - start_time
-                    print(f'inside batch - for futures loop start time is {start_time} and duration is {duration}')
-                    logger.info(f'inside batch - for futures loop start time is {start_time} and duration is {duration}')
-                    
-                    print(f"Inside batch_vst_v2: Job {job} completed in {duration:.2f} seconds.")
-                    self.logger.info(f"Inside batch_vst_v2 - for futures loop: Job {job} completed in {duration:.2f} seconds.")
-                    self.logger.info(f"Inside batch_vst_v2 - for futures loop: Job {index} result: {result}")
-                    
+        # Monitor and enforce timeouts
+        for p, index in processes:
+            p.join(JOB_TIMEOUT)
+            if p.is_alive():
+                print(f"Job {index} exceeded timeout. Terminating process.")
+                self.logger.warning(f"Job {index} exceeded timeout. Terminating process.")
+                p.terminate()
+                p.join()
+                self.add_job_result(index, 'Failed')
+            else:
+                # Check if job succeeded
+                result = return_dict.get(index)
+                if result == 'Success':
                     self.add_job_result(index, 'COMPLETE')
-                    
-                    #If the job exceeds the timeout, take necessary action
-                    if duration > JOB_TIMEOUT:
-                        print(f"Inside batch_vst_v2: Job {job} took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed.")
-                        logger.info(f"Inside batch_vst_v2: Job {job} took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed.")
-                        self.logger.warning(f"Inside batch_vst_v2: Job {job} took longer than allowable time ({JOB_TIMEOUT} seconds). Marking as Failed.")
-                        self.add_job_result(index, 'Failed')
-
-                except concurrent.futures.TimeoutError:
-                    duration = time.time() - start_time
-                    print(f"Insde Batch_ast_v2 exception: job {job} timed out after {duration:.2f} seconds.")
-                    self.logger.error(f"Insde Batch_ast_v2 exception: job {job} timed out after {duration:.2f} seconds.")
+                    print(f"Job {index} completed successfully.")
+                    self.logger.info(f"Job {index} completed successfully.")
+                else:
                     self.add_job_result(index, 'Failed')
-
-                except Exception as e:
-                    duration = time.time() - start_time
-                    print(f"Insde Batch_ast_v2: Job {job} failed with error: {e} after {duration:.2f} seconds.")
-                    self.logger.error(f"Insde Batch_ast_v2: Job {job} failed with error: {e} after {duration:.2f} seconds.")
-                    self.add_job_result(index, 'Failed')
+                    print(f"Job {index} failed.")
+                    self.logger.error(f"Job {index} failed.")
 
     def create_new_queuefile(self):
         '''write a new queuefile with preset header'''
@@ -519,7 +483,7 @@ class AST_FACTORY:
             c = headers.index(h) + 1
             ws.cell(row=1, column=c).value = h
         wb.save(self.queuefile)
-
+        
     def build_aoi_from_kml(self, aoi):
         "Write shp file for temporary use"
 
@@ -658,8 +622,7 @@ class AST_FACTORY:
 
 ###############################################################################################################################################################################
 
-
-def process_job(ast_instance, job, job_index, current_path):
+def process_job_mp(ast_instance, job, job_index, current_path, return_dict):
     import os
     import datetime
     import logging
@@ -674,7 +637,7 @@ def process_job(ast_instance, job, job_index, current_path):
     # Generate a unique log file name per process
     log_file = os.path.join(
         log_folder,
-        f'ast_worker_log_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}_{mp.current_process().pid}.log'
+        f'ast_worker_log_{datetime.datetime.now().strftime("%Y_%m_%d_%H%M%S")}_{mp.current_process().pid}.log'
     )
 
     # Set up logging config in the worker process
@@ -686,7 +649,7 @@ def process_job(ast_instance, job, job_index, current_path):
 
     logger = logging.getLogger(f"worker_{job_index}")
 
-    logger.info(f"Inside process_job(): Processing job {job_index}: {job}")
+    logger.info(f"Processing job {job_index}: {job}")
     print(f"Processing job {job_index}: {job}")
 
     try:
@@ -694,10 +657,10 @@ def process_job(ast_instance, job, job_index, current_path):
         ast_toolbox = os.getenv('TOOLBOX')  # Get the toolbox path from environment variables
         if ast_toolbox:
             arcpy.ImportToolbox(ast_toolbox)
-            print(f"Inside process_job(): AST Toolbox imported successfully in worker.")
-            logger.info(f"Inside process_job(): AST Toolbox imported successfully in worker.")
+            print(f"AST Toolbox imported successfully in worker.")
+            logger.info(f"AST Toolbox imported successfully in worker.")
         else:
-            raise ImportError("Inside process_job(): AST Toolbox path not found. Ensure TOOLBOX path is set correctly in environment variables.")
+            raise ImportError("AST Toolbox path not found. Ensure TOOLBOX path is set correctly in environment variables.")
 
         # Prepare parameters
         params = []
@@ -714,12 +677,12 @@ def process_job(ast_instance, job, job_index, current_path):
             raise ValueError("Region is required and was not provided.")
 
         # Log the parameters being used
-        logger.debug(f"Inside process_job(): Job Parameters: {params}")
+        logger.debug(f"Job Parameters: {params}")
 
         # Run the ast tool
-        logger.info("Inside process_job(): Running MakeAutomatedStatusSpreadsheet_ast...")
+        logger.info("Running MakeAutomatedStatusSpreadsheet_ast...")
         arcpy.MakeAutomatedStatusSpreadsheet_ast(*params)
-        logger.info("Inside process_job(): MakeAutomatedStatusSpreadsheet_ast completed successfully.")
+        logger.info("MakeAutomatedStatusSpreadsheet_ast completed successfully.")
         ast_instance.add_job_result(job_index, 'COMPLETE')
 
         # Capture and log arcpy messages
@@ -728,24 +691,21 @@ def process_job(ast_instance, job, job_index, current_path):
         arcpy_errors = arcpy.GetMessages(2)
 
         if arcpy_messages:
-            logger.info(f'Inside process_job(): arcpy messages: {arcpy_messages}')
+            logger.info(f'arcpy messages: {arcpy_messages}')
         if arcpy_warnings:
-            logger.warning(f'Inside process_job(): arcpy warnings: {arcpy_warnings}')
+            logger.warning(f'arcpy warnings: {arcpy_warnings}')
         if arcpy_errors:
-            logger.error(f'Inside process_job(): arcpy errors: {arcpy_errors}')
+            logger.error(f'arcpy errors: {arcpy_errors}')
 
-        # Indicate completion
-        logger.info(f"Inside process_job(): Job {job_index} completed successfully.")
-
-        return job_index  # Or any result you want to return
+        # Indicate success
+        return_dict[job_index] = 'Success'
 
     except Exception as e:
-        # Log the exception with traceback
-        logger.error(f"Inside process_job(): ob {job_index} failed with error: {e}")
+        # Indicate failure
+        return_dict[job_index] = 'Failed'
+        logger.error(f"Job {job_index} failed with error: {e}")
         logger.debug(traceback.format_exc())
-        print(f"Inside process_job(): Job {job_index} failed with error: {e}")
-        # Re-raise the exception if you want it to be caught in the main process
-        raise
+        print(f"Job {job_index} failed with error: {e}")
 
 ###############################################################################################################################################################################
 
