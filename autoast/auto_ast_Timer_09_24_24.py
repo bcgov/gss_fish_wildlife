@@ -858,7 +858,7 @@ if __name__ == '__main__':
     
     ast.batch_ast_v2()
     
-    ast.re_load_failed_jobs()
+    # ast.re_load_failed_jobs()
     
     # ast.re_batch_failed_ast()
 
