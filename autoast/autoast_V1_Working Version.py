@@ -26,7 +26,7 @@ import logging
 
 
 ## *** INPUT YOUR EXCEL FILE NAME HERE ***
-excel_file = '2_quick_land_jobs.xlsx'
+excel_file = '2024_10_07.xlsx'
 
 # Define the job timeout in seconds (6 hours) *** Timeout currently not working in this version *** No need to change the time
 JOB_TIMEOUT = 6 * 60 * 60
