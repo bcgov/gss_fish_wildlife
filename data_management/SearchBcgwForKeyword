@@ -1,0 +1,55 @@
+import arcpy
+
+aprx = arcpy.mp.ArcGISProject('CURRENT')
+connection_path = r"**Right click and select copy path on your BCGW database in ArcGIS Pro and then paste the path here**"
+
+
+def search_feature_datasets(keyword):
+    # Set the workspace to the .sde connection
+    arcpy.env.workspace = connection_path
+    
+    # List all feature datasets in the .sde workspace
+    datasets = arcpy.ListDatasets("*", "Feature") or ['']  # Include feature datasets or empty string if none
+    
+    matching_datasets = []
+    
+    # Iterate through all feature datasets
+    for ds in datasets:
+        # List feature classes within the dataset
+        feature_classes = arcpy.ListFeatureClasses("*", feature_dataset=ds)
+
+        for fc in feature_classes:
+            # Check if the keyword is in the feature class name (wildcard search)
+            if keyword.lower() in fc.lower():
+                matching_datasets.append(f"{ds}\\{fc}")
+    
+    # Also check for standalone feature classes that are not part of a feature dataset
+    standalone_feature_classes = arcpy.ListFeatureClasses("*")  # Standalone feature classes in the workspace
+
+    for fc in standalone_feature_classes:
+        # Check if the keyword is in the standalone feature class name
+        if keyword.lower() in fc.lower():
+            matching_datasets.append(fc)
+
+    # List all tables (non-spatial) in the .sde workspace and check for keyword matches
+    tables = arcpy.ListTables("*")
+    
+    for table in tables:
+        if keyword.lower() in table.lower():
+            matching_datasets.append(table)
+
+    # Print out the matching datasets, feature classes, or tables
+    if matching_datasets:
+        print(f"Datasets, feature classes, or tables containing '{keyword}':")
+        for item in matching_datasets:
+            print(item)
+    else:
+        print(f"No datasets, feature classes, or tables found containing the keyword '{keyword}'.")
+
+    print("Search Complete")
+
+# Prompt the user to enter a keyword
+user_keyword = input("Enter a keyword to search for in the feature datasets, feature classes, or tables: ")
+
+# Run the search function with the user input
+search_feature_datasets(user_keyword)
