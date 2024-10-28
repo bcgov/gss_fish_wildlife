@@ -5,6 +5,8 @@
 # Author: https://pro.arcgis.com/en/pro-app/latest/arcpy/geoprocessing_and_python/a-template-for-python-toolboxes.htm
 
 # Created on: 10/21/2024
+
+#New sample changes
 # 
 #
 
