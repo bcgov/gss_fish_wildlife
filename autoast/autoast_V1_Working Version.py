@@ -1,5 +1,5 @@
 # autoast is a script for batch processing the automated status tool
-# author: wburt
+# author: csostad and wburt
 # copyrite Governent of British Columbia
 # Copyright 2019 Province of British Columbia
 
@@ -26,7 +26,7 @@ import logging
 
 
 ## *** INPUT YOUR EXCEL FILE NAME HERE ***
-excel_file = '2024_10_07.xlsx'
+excel_file = '4_tested_jobs.xlsx'
 
 # Define the job timeout in seconds (6 hours) *** Timeout currently not working in this version *** No need to change the time
 JOB_TIMEOUT = 6 * 60 * 60
