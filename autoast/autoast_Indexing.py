@@ -36,7 +36,7 @@ import sys
 import time
 
 ## *** INPUT YOUR EXCEL FILE NAME HERE ***
-excel_file = '4_jobs_tested.xlsx'
+excel_file = '2_jobs.xlsx'
 
 # Set the job timeout further down. Use CNTL + F to search for JOB_TIMEOUT
 
@@ -410,18 +410,18 @@ class AST_FACTORY:
             if self.AST_CONDITION_COLUMN in header:
                 self.logger.info(f"Add Job Result - '{self.AST_CONDITION_COLUMN}' column found in the spreadsheet.")
                 
-            # Check if 'DONT OVERWRITE OUTPUTS' exists in the header
-            if self.DONT_OVERWRITE_OUTPUTS not in header:
-                raise ValueError(f"'{self.DONT_OVERWRITE_OUTPUTS}' column not found in the spreadsheet.")
+            # # Check if 'DONT OVERWRITE OUTPUTS' exists in the header
+            # if self.DONT_OVERWRITE_OUTPUTS not in header:
+            #     raise ValueError(f"'{self.DONT_OVERWRITE_OUTPUTS}' column not found in the spreadsheet.")
             
-            if self.DONT_OVERWRITE_OUTPUTS in header:
-                self.logger.info(f"Add Job Result - '{self.DONT_OVERWRITE_OUTPUTS}' column found in the spreadsheet.")
+            # if self.DONT_OVERWRITE_OUTPUTS in header:
+            #     self.logger.info(f"Add Job Result - '{self.DONT_OVERWRITE_OUTPUTS}' column found in the spreadsheet.")
             
             # Find the ast condition column and assign it to the correct index
             ast_condition_index = header.index(self.AST_CONDITION_COLUMN) + 1  # +1 because Excel columns are 1-indexed
 
-            # Find the dont_overwrite_outputs column and assign it to the correct index
-            dont_overwrite_outputs_index = header.index(self.DONT_OVERWRITE_OUTPUTS) + 1  # +1 because Excel columns are 1-indexed
+            # # Find the dont_overwrite_outputs column and assign it to the correct index
+            # dont_overwrite_outputs_index = header.index(self.DONT_OVERWRITE_OUTPUTS) + 1  # +1 because Excel columns are 1-indexed
             
             # Calculate the actual row index in Excel, +2 to account for header and 0-index
             excel_row_index = job_index + 2  # NOTE I changed this to +1 and it changes the ast_condition header row to Failed. So it must stay at +2
@@ -440,12 +440,12 @@ class AST_FACTORY:
             # Update the ast condition for the specific job to the new condition (failed, queued, complete)
             ws.cell(row=excel_row_index, column=ast_condition_index, value=condition)
 
-            # if the condition in AST_CONDITION_COLUMN is 'Requeued" then go to the dont overwrite output column and change false to true
-            if condition == 'Requeued':
-                # print(f"Add Job Result - Job {job_index} failed, updating condition to 'Requeued'.  **CHANGED JOB INDEX +1 to JOB INDEX ***") #NOTE CHANGED JOB INDEX + 1 to JOB INDEX
-                self.logger.info(f"Add Job Result - Job {job_index} (Row {excel_row_index})  updating condition to 'Requeued'.") 
-                ws.cell(row=excel_row_index, column=dont_overwrite_outputs_index, value="True")
-                self.logger.info(f"Add Job Result - Job {job_index} (Row {excel_row_index})  updating dont_overwrite_outputs to 'True'.")
+            # # if the condition in AST_CONDITION_COLUMN is 'Requeued" then go to the dont overwrite output column and change false to true
+            # if condition == 'Requeued':
+            #     # print(f"Add Job Result - Job {job_index} failed, updating condition to 'Requeued'.  **CHANGED JOB INDEX +1 to JOB INDEX ***") #NOTE CHANGED JOB INDEX + 1 to JOB INDEX
+            #     self.logger.info(f"Add Job Result - Job {job_index} (Row {excel_row_index})  updating condition to 'Requeued'.") 
+            #     ws.cell(row=excel_row_index, column=dont_overwrite_outputs_index, value="True")
+            #     self.logger.info(f"Add Job Result - Job {job_index} (Row {excel_row_index})  updating dont_overwrite_outputs to 'True'.")
             
             # Save the workbook with the updated condition
             self.logger.info(f"Add Job Result - Updated Job {job_index} with condition '{condition}'.")
@@ -1018,7 +1018,7 @@ def process_job_mp(ast_instance, job, job_index, current_path, return_dict):
                 
                 #DELETE This was put in for testing so that it's easy to delete all outputs from one place at once. 
                 DEFAULT_DIR = os.getenv('DIR')
-                output_directory = os.path.join(DIR, f'job{job_index}')
+                output_directory = os.path.join("T:", f'job{job_index}')
                 job['output_directory'] = output_directory
                 logger.warning(f"Process Job Mp: Output directory not provided for job {job_index}. Using default path: {output_directory}")
         else:
