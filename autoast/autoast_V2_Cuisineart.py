@@ -36,7 +36,7 @@ import sys
 import time
 
 ## *** INPUT YOUR EXCEL FILE NAME HERE ***
-excel_file = '4_tested_jobs.xlsx'
+excel_file = '4_jobs_tested.xlsx'
 
 # Set the job timeout further down. Use CNTL + F to search for JOB_TIMEOUT
 
