@@ -723,30 +723,30 @@ class AST_FACTORY:
                         continue
                         
                         
-                    # Check the condition of DONT_OVERWRITE_OUTPUTS
-                    current_value = job.get(self.DONT_OVERWRITE_OUTPUTS, '')
+                    # # Check the condition of DONT_OVERWRITE_OUTPUTS
+                    # current_value = job.get(self.DONT_OVERWRITE_OUTPUTS, '')
 
-                    # If DONT_OVERWRITE_OUTPUTS is anything but True, change it to 'True'
-                    if current_value != 'True':
-                        # Log the current state before changing
-                        if current_value == 'False':
-                            print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is False, changing to True")
-                            self.logger.info(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is False, changing to True")
-                        elif current_value == '':
-                            print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is empty, changing to True")
-                            self.logger.error(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is empty, changing to True")
-                        else:
-                            print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is '{current_value}', changing to True")
-                            self.logger.warning(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is '{current_value}', changing to True")
+                    # # If DONT_OVERWRITE_OUTPUTS is anything but True, change it to 'True'
+                    # if current_value != 'True':
+                    #     # Log the current state before changing
+                    #     if current_value == 'False':
+                    #         print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is False, changing to True")
+                    #         self.logger.info(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is False, changing to True")
+                    #     elif current_value == '':
+                    #         print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is empty, changing to True")
+                    #         self.logger.error(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is empty, changing to True")
+                    #     else:
+                    #         print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is '{current_value}', changing to True")
+                    #         self.logger.warning(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is '{current_value}', changing to True")
                         
-                        # Set the value to 'True'
-                        job[self.DONT_OVERWRITE_OUTPUTS] = "True"
+                    #     # Set the value to 'True'
+                    #     job[self.DONT_OVERWRITE_OUTPUTS] = "True"
                     
-                    # If DONT_OVERWRITE_OUTPUTS is already 'True, don't change it. 
-                    else:
-                        # If it's already 'True', log that no change is needed
-                        print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is already True, no change needed")
-                        self.logger.info(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is already True, no change needed")
+                    # # If DONT_OVERWRITE_OUTPUTS is already 'True, don't change it. 
+                    # else:
+                    #     # If it's already 'True', log that no change is needed
+                    #     print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is already True, no change needed")
+                    #     self.logger.info(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is already True, no change needed")
 
                     # Add the job to the jobs list after all checks and processing
                     self.jobs.append(job)
@@ -1000,30 +1000,30 @@ def process_job_mp(ast_instance, job, job_index, current_path, return_dict):
         # Get the output directory from the job
         output_directory = job.get('output_directory')
 
-        # If output_directory is not provided
-        if not output_directory:
-            # Check if 'output directory is same as input directory' is set to True
-            output_same_as_input = job.get('output_directory_is_same_as_input_directory')
-            if output_same_as_input == True or str(output_same_as_input).lower() == 'true':
-                # Use the input_directory as output_directory
-                #NOTE This handling is already present in the AST Tool
-                output_directory = job.get('input_directory')
-                if not output_directory:
-                    raise ValueError(f"Process Job Mp: 'Input Directory' is required when 'Output Directory is same as Input Directory' is True for job {job_index}.")
-                job['output_directory'] = output_directory
-                logger.info(f"Process Job Mp: Output directory is same as input directory for job {job_index}. Using: {output_directory}")
-            else:
-                # If there was no output directory provided and 'output directory is same as input directory' is False
-                # Set the default output directory to a default location (This can be changed later) This will prevent the job from failing due to a user error
+        # # If output_directory is not provided
+        # if not output_directory:
+        #     # Check if 'output directory is same as input directory' is set to True
+        #     output_same_as_input = job.get('output_directory_is_same_as_input_directory')
+        #     if output_same_as_input == True or str(output_same_as_input).lower() == 'true':
+        #         # Use the input_directory as output_directory
+        #         #NOTE This handling is already present in the AST Tool
+        #         output_directory = job.get('input_directory')
+        #         if not output_directory:
+        #             raise ValueError(f"Process Job Mp: 'Input Directory' is required when 'Output Directory is same as Input Directory' is True for job {job_index}.")
+        #         job['output_directory'] = output_directory
+        #         logger.info(f"Process Job Mp: Output directory is same as input directory for job {job_index}. Using: {output_directory}")
+        #     else:
+        #         # If there was no output directory provided and 'output directory is same as input directory' is False
+        #         # Set the default output directory to a default location (This can be changed later) This will prevent the job from failing due to a user error
                 
-                #DELETE This was put in for testing so that it's easy to delete all outputs from one place at once. 
-                DEFAULT_DIR = os.getenv('DIR')
-                output_directory = os.path.join("T:", f'job{job_index}')
-                job['output_directory'] = output_directory
-                logger.warning(f"Process Job Mp: Output directory not provided for job {job_index}. Using default path: {output_directory}")
-        else:
-            # Output directory is provided
-            job['output_directory'] = output_directory
+        #         #DELETE This was put in for testing so that it's easy to delete all outputs from one place at once. 
+        #         DEFAULT_DIR = os.getenv('DIR')
+        #         output_directory = os.path.join("T:", f'job{job_index}')
+        #         job['output_directory'] = output_directory
+        #         logger.warning(f"Process Job Mp: Output directory not provided for job {job_index}. Using default path: {output_directory}")
+        # else:
+        #     # Output directory is provided
+        #     job['output_directory'] = output_directory
 
         # Create the output directory if the user put in a path but failed to create the output directory in Windows explorer
         if output_directory and not os.path.exists(output_directory):
