@@ -567,7 +567,7 @@ class AST_FACTORY:
                 
                 else:
                     # Handle unexpected cases
-                    self.add_job_result(job_index, 'Failed')
+                    self.add_job_result(job_index, 'Unknown Error')
                     other_exception_failed_counter += 1
                     print(f"Batch Ast: Job {job_index} failed with unknown status.")
                     self.logger.error(f"Batch AST: Job {job_index} failed with unknown status. Other Exception failed counter is {other_exception_failed_counter}")
@@ -575,36 +575,7 @@ class AST_FACTORY:
         self.logger.info('\n')    
         self.logger.info("Batch Ast Complete - Check separate worker log file for more details")
     
-    def re_batch_failed_ast(self):
 
-        ''' Executes the loaded failed jobs'''
-
-
-        print("Re Batching AST")
-        
-        logger.info("***************************************************************************************************************************")
-        logger.info("Re Batching Failed AST")        
-        logger.info("***************************************************************************************************************************")
-        print(f"Number of failed jobs: {len(self.jobs)}")
-        logger.info(f"Rebatch Failed AST - Number of failed jobs: {len(self.jobs)}")
-        
-        # iterate through the jobs and run the start_ast_tb function on each row of the excel sheet
-        for job_index, job in enumerate(self.jobs):
-            try:
-                # print(f"Starting job {counter}")
-                logger.info(f"Rebatching Failed AST - Starting job {job_index}")
-                
-                # Start the Ast Tool
-                self.start_ast_tb([job])
-                # print(f"Job {counter} COMPLETE")
-                logger.info(f"Rebatching Failed AST - Job {job_index} COMPLETE")
-                self.add_job_result(job_index, 'COMPLETE')
-
-            except Exception as e:
-                # Log the exception and the job that caused it
-                # print(f"Error encountered with job {counter}: {e}")
-                logger.error(f"Rebatching Failed AST - Error encountered with job {job_index}: {e}")
-                self.add_job_result(job_index, 'Failed')
 
 # This is the newer version of the re_load_failed_jobs function from the autoastv2Script unedited
 # NOTE ** Reload failed jobs may be able to be incorporated into load failed jobs to tighten up the script
@@ -634,13 +605,14 @@ class AST_FACTORY:
                 # Open the Excel workbook and select the correct sheet
                 wb = load_workbook(filename=self.queuefile)
                 ws = wb[self.XLSX_SHEET_NAME]
+                
+                
                 print(f'Workbook loaded is {wb}')   
                 self.logger.info(f'Re load Failed Jobs: Workbook loaded is {wb}') 
                 
                 # Get the header (column names) from the first row of the sheet
                 header = list([row for row in ws.iter_rows(min_row=1, max_col=None, values_only=True)][0])
 
-                
                 # Read all the data rows (starting from the second row to skip the header)
                 data = []
                 self.logger.info(f'Re load Failed Jobs: Reading all data rows and building data list')
@@ -677,7 +649,6 @@ class AST_FACTORY:
                         # Check if the key corresponds to the ast_condition column
                         if key is not None and key.lower() == self.AST_CONDITION_COLUMN.lower():
                             ast_condition = value if value is not None else ""
-                            print(f"Re Load Failed Jobs: key value in zip - AST Condition is {ast_condition}")
 
                         # Assign an empty string to any None values
                         value = "" if value is None else value
@@ -1106,9 +1077,9 @@ if __name__ == '__main__':
         ast.create_new_queuefile()
         
     # Load the jobs using the load_jobs method. This will scan the excel sheet and assign to "jobs"    
-    jobs = ast.load_jobs()
+    # jobs = ast.load_jobs()
     
-    ast.batch_ast()
+    # ast.batch_ast()
     
     ast.re_load_failed_jobs_V2()
     
