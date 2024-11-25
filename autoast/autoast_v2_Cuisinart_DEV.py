@@ -673,80 +673,80 @@ class AST_FACTORY:
                             print(f"Re Load Failed Jobs: Assigning values to job dictionary")
                             job[key] = value
 
-                    # Skip if marked as "COMPLETE"
-                    if ast_condition.upper() == 'COMPLETE':
-                        print(f"Re Load Failed Jobs: Skipping job {job_index} as it is marked COMPLETE.")
-                        self.logger.info(f"Re Load Failed Jobs: Adding Complete to dictionary Skipping job {job_index} as it is marked COMPLETE.")
-                        # continue  
-                        # ast_condition = 'COMPLETE'    
-                    
-                    # **Only requeue jobs that are marked as 'FAILED'**
-                    elif ast_condition.upper() == 'FAILED':
-                        self.logger.info(f"Re Load Failed Jobs: Requeuing {job_index} as it is marked Failed.")
-                        ast_condition = 'Requeued'
-                    
-                    else:
-                        self.logger.warning(f"Re Load Failed Jobs: Job {job_index} is not marked as Complete or Failed. Please check the workbook. Skipping this job.")
-                        # continue
-                        ast_condition = 'ERROR'
-                    
-                    # Assign updated condition to the job dictionary
-                    job[self.AST_CONDITION_COLUMN] = ast_condition
+                        # Skip if marked as "COMPLETE"
+                        if ast_condition.upper() == 'COMPLETE':
+                            print(f"Re Load Failed Jobs: Skipping job {job_index} as it is marked {ast_condition}.")
+                            self.logger.info(f"Re Load Failed Jobs: Adding Complete to dictionary Skipping job {job_index} as it is marked COMPLETE.")
+                            # continue  
+                            # ast_condition = 'COMPLETE'    
                         
-                    print(f"Re Load Failed Jobs: Job {job_index} is marked as Failed, re-assigning ast condition to {ast_condition}")
-                    self.logger.info(f"Re Load Failed Jobs: Job {job_index}'s ast condition has been updated as '{ast_condition}'")
-
-
-                    # Immediately update the Excel sheet with the new condition
-                    try:
-                        self.add_job_result(job_index, ast_condition)
-                        self.logger.info(f"Re load Jobs - Added job condition '{ast_condition}' for job {job_index} to jobs list")
-                    except Exception as e:
-                        print(f"Error updating Excel sheet at row {job_index}: {e}")
-                        self.logger.error(f"Re load Jobs - Error updating Excel sheet at row {job_index}: {e}")
-                        self.logger.error(traceback.format_exc())
-                        continue
+                        # **Only requeue jobs that are marked as 'FAILED'**
+                        elif ast_condition.upper() == 'FAILED':
+                            self.logger.info(f"Re Load Failed Jobs: Requeuing {job_index} as it is marked Failed.")
+                            ast_condition = 'Requeued'
                         
-                        
-                    # Check the condition of DONT_OVERWRITE_OUTPUTS
-                    current_value = job.get(self.DONT_OVERWRITE_OUTPUTS, '')
-
-                    # If DONT_OVERWRITE_OUTPUTS is anything but True, change it to 'True'
-                    if current_value != 'True':
-                        # Log the current state before changing
-                        if current_value == 'False':
-                            print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is False, changing to True")
-                            self.logger.info(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is False, changing to True")
-                        elif current_value == '':
-                            print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is empty, changing to True")
-                            self.logger.error(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is empty, changing to True")
                         else:
-                            print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is '{current_value}', changing to True")
-                            self.logger.warning(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is '{current_value}', changing to True")
+                            self.logger.warning(f"Re Load Failed Jobs: Job {job_index} is not marked as Complete or Failed. Please check the workbook. Skipping this job.")
+                            # continue
+                            ast_condition = 'ERROR'
                         
-                        # Set the value to 'True'
-                        job[self.DONT_OVERWRITE_OUTPUTS] = "True"
-                    
-                    # If DONT_OVERWRITE_OUTPUTS is already 'True, don't change it. 
-                    else:
-                        # If it's already 'True', log that no change is needed
-                        print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is already True, no change needed")
-                        self.logger.info(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is already True, no change needed")
+                        # Assign updated condition to the job dictionary
+                        job[self.AST_CONDITION_COLUMN] = ast_condition
+                            
+                        print(f"Re Load Failed Jobs: Job {job_index} is marked as Failed, re-assigning ast condition to {ast_condition}")
+                        self.logger.info(f"Re Load Failed Jobs: Job {job_index}'s ast condition has been updated as '{ast_condition}'")
 
-                    # Add the job to the jobs list after all checks and processing
-                    self.jobs.append(job)
-                    print(f"Re load Jobs - Job Condition is not Complete ({ast_condition}), adding job: {job_index} to jobs list")
-                    self.logger.info(f"Re load Jobs - Job Condition is not Complete ({ast_condition}), adding job: {job_index} to jobs list")
-                    self.logger.info(f"\n")
-                    self.logger.info(f"------------------------------------------------------------------------------------")   
-                    self.logger.info(f" Job list is {job}")
-                    self.logger.info(f"------------------------------------------------------------------------------------")
-                    self.logger.info(f"\n")
-                    
-                    
-                    
-                    print(f"Re Load Jobs - Job dictionary is {job}")
-                    self.logger.info(f"Re load Jobs - Job {job_index} dictionary is {job}")
+
+                        # Immediately update the Excel sheet with the new condition
+                        try:
+                            self.add_job_result(job_index, ast_condition)
+                            self.logger.info(f"Re load Jobs - Added job condition '{ast_condition}' for job {job_index} to jobs list")
+                        except Exception as e:
+                            print(f"Error updating Excel sheet at row {job_index}: {e}")
+                            self.logger.error(f"Re load Jobs - Error updating Excel sheet at row {job_index}: {e}")
+                            self.logger.error(traceback.format_exc())
+                            continue
+                            
+                            
+                        # Check the condition of DONT_OVERWRITE_OUTPUTS
+                        current_value = job.get(self.DONT_OVERWRITE_OUTPUTS, '')
+
+                        # If DONT_OVERWRITE_OUTPUTS is anything but True, change it to 'True'
+                        if current_value != 'True':
+                            # Log the current state before changing
+                            if current_value == 'False':
+                                print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is False, changing to True")
+                                self.logger.info(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is False, changing to True")
+                            elif current_value == '':
+                                print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is empty, changing to True")
+                                self.logger.error(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is empty, changing to True")
+                            else:
+                                print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is '{current_value}', changing to True")
+                                self.logger.warning(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is '{current_value}', changing to True")
+                            
+                            # Set the value to 'True'
+                            job[self.DONT_OVERWRITE_OUTPUTS] = "True"
+                        
+                        # If DONT_OVERWRITE_OUTPUTS is already 'True, don't change it. 
+                        else:
+                            # If it's already 'True', log that no change is needed
+                            print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is already True, no change needed")
+                            self.logger.info(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is already True, no change needed")
+
+                        # Add the job to the jobs list after all checks and processing
+                        self.jobs.append(job)
+                        print(f"Re load Jobs - Job Condition is not Complete ({ast_condition}), adding job: {job_index} to jobs list")
+                        self.logger.info(f"Re load Jobs - Job Condition is not Complete ({ast_condition}), adding job: {job_index} to jobs list")
+                        self.logger.info(f"\n")
+                        self.logger.info(f"------------------------------------------------------------------------------------")   
+                        self.logger.info(f" Job list is {job}")
+                        self.logger.info(f"------------------------------------------------------------------------------------")
+                        self.logger.info(f"\n")
+                        
+                        
+                        
+                        print(f"Re Load Jobs - Job dictionary is {job}")
+                        self.logger.info(f"Re load Jobs - Job {job_index} dictionary is {job}")
                                 
             except FileNotFoundError as e:
                 print(f"Error: Queue file not found - {e}")
