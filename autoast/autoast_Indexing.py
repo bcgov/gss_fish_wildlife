@@ -36,11 +36,11 @@ import sys
 import time
 
 ## *** INPUT YOUR EXCEL FILE NAME HERE ***
-excel_file = '2_jobs.xlsx'
+excel_file = '7_tested_jobs.xlsx'
 
 # Set the job timeout further down. Use CNTL + F to search for JOB_TIMEOUT
 
-# Number of CPUS to use for multiprocessing
+# Number of CPUS to use for multiprocessing ** Currently not used
 NUM_CPUS = mp.cpu_count()
 ###############################################################################################################################################################################
 # Set up logging
@@ -245,14 +245,16 @@ class AST_FACTORY:
 
                 # Get the header (column names) from the first row of the sheet
                 header = list([row for row in ws.iter_rows(min_row=1, max_col=None, values_only=True)][0])
-
+                
                 # Read all the data rows (starting from the second row to skip the header)
-                data = [row for row in ws.iter_rows(min_row=2, max_col=None, values_only=True)]
+                data = []
+                
+                for row in ws.iter_rows(min_row=2, max_col=None, values_only=True):
+                    print(f'Row is {row}')
+                    
+                    data.append(row)
+                
 
-                # Initialize a dictionary to store the job's parameters
-                job = {}
-                self.logger.info('Load Jobs - Creating empty dictionary')
-                ast_condition = None  # Initialize the ast_condition for the current row
 
             
                 
@@ -266,6 +268,13 @@ class AST_FACTORY:
                     self.logger.info(f"-                        Load Jobs: Start of Job {job_index}                               -")
                     self.logger.info(f"-------------------------------------------------------------------------------")
                     self.logger.info(f"\n")
+                    
+                    # Initialize a dictionary to store the job's parameters
+                    job = {}
+                    self.logger.info('Load Jobs - Creating empty dictionary')
+                    ast_condition = None  # Initialize the ast_condition for the current row
+                        
+                    
                     # Skip any completely blank rows
                     if all((value is None or str(value).strip() == '') for value in row_data):
                         print(f"Load Jobs - Skipping blank row at job index ({job_index}) ")
@@ -285,7 +294,6 @@ class AST_FACTORY:
                         # Assign the value to the job dictionary if the key is not None
                         if key is not None:
                             job[key] = value
-                            self.logger.info(f"Load Jobs - Job {job_index} - Key: {key}, Value: {value}")
 
                     # Skip if marked as "COMPLETE"
                     if ast_condition.upper() == 'COMPLETE':
@@ -297,6 +305,8 @@ class AST_FACTORY:
                     if ast_condition is None or ast_condition.strip() == '' or ast_condition.upper() != 'COMPLETE':
                         # Assign 'Queued' to the ast_condition and update the job dictionary
                         ast_condition = 'Queued'
+                        
+                        # Assign the updated ast_condition to the job dictionary (queued)
                         job[self.AST_CONDITION_COLUMN] = ast_condition
                         self.logger.info(f"Load Jobs - (Queued assigned to Job ({job_index}) is ({ast_condition})")
 
@@ -331,6 +341,8 @@ class AST_FACTORY:
                     self.logger.info(f"-                        End of Job {job_index}                                -")
                     self.logger.info(f"-------------------------------------------------------------------------------")
                     self.logger.info(f"\n")
+                    
+                    
             except FileNotFoundError as e:
                 print(f"Error: Queue file not found - {e}")
                 self.logger.error(f"Error: Queue file not found - {e}")
@@ -339,7 +351,6 @@ class AST_FACTORY:
                 self.logger.error(f"Unexpected error loading jobs: {e}")
 
             return self.jobs
-
 
 
     def classify_input_type(self, job):
@@ -487,8 +498,9 @@ class AST_FACTORY:
         self.logger.info(f"\n")
         
         import time
-             
-        JOB_TIMEOUT = 7200 # 2 hours in seconds
+        
+        # Set job timeout to 6 hours
+        JOB_TIMEOUT = 21600  # 6 hours in seconds
         self.logger.info(f"Batch Ast: Job Timeout set to {JOB_TIMEOUT} seconds")
         print(f"Batch Ast: Job Timeout set to {JOB_TIMEOUT} seconds")
 
@@ -694,30 +706,30 @@ class AST_FACTORY:
                         continue
                         
                         
-                    # # Check the condition of DONT_OVERWRITE_OUTPUTS
-                    # current_value = job.get(self.DONT_OVERWRITE_OUTPUTS, '')
+                    # Check the condition of DONT_OVERWRITE_OUTPUTS
+                    current_value = job.get(self.DONT_OVERWRITE_OUTPUTS, '')
 
-                    # # If DONT_OVERWRITE_OUTPUTS is anything but True, change it to 'True'
-                    # if current_value != 'True':
-                    #     # Log the current state before changing
-                    #     if current_value == 'False':
-                    #         print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is False, changing to True")
-                    #         self.logger.info(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is False, changing to True")
-                    #     elif current_value == '':
-                    #         print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is empty, changing to True")
-                    #         self.logger.error(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is empty, changing to True")
-                    #     else:
-                    #         print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is '{current_value}', changing to True")
-                    #         self.logger.warning(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is '{current_value}', changing to True")
+                    # If DONT_OVERWRITE_OUTPUTS is anything but True, change it to 'True'
+                    if current_value != 'True':
+                        # Log the current state before changing
+                        if current_value == 'False':
+                            print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is False, changing to True")
+                            self.logger.info(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is False, changing to True")
+                        elif current_value == '':
+                            print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is empty, changing to True")
+                            self.logger.error(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is empty, changing to True")
+                        else:
+                            print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is '{current_value}', changing to True")
+                            self.logger.warning(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is '{current_value}', changing to True")
                         
-                    #     # Set the value to 'True'
-                    #     job[self.DONT_OVERWRITE_OUTPUTS] = "True"
+                        # Set the value to 'True'
+                        job[self.DONT_OVERWRITE_OUTPUTS] = "True"
                     
-                    # # If DONT_OVERWRITE_OUTPUTS is already 'True, don't change it. 
-                    # else:
-                    #     # If it's already 'True', log that no change is needed
-                    #     print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is already True, no change needed")
-                    #     self.logger.info(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is already True, no change needed")
+                    # If DONT_OVERWRITE_OUTPUTS is already 'True, don't change it. 
+                    else:
+                        # If it's already 'True', log that no change is needed
+                        print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is already True, no change needed")
+                        self.logger.info(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is already True, no change needed")
 
                     # Add the job to the jobs list after all checks and processing
                     self.jobs.append(job)
@@ -1008,7 +1020,6 @@ def process_job_mp(ast_instance, job, job_index, current_path, return_dict):
                 raise RuntimeError(f"Failed to create the output directory '{output_directory}'. Check your permissions: {e}")
 
 
-
         # Ensure that region has been entered otherwise job will fail
         if not job.get('region'):
             raise ValueError("Process Job Mp: Region is required and was not provided. Job Failed")
@@ -1077,16 +1088,14 @@ if __name__ == '__main__':
         ast.create_new_queuefile()
         
     # Load the jobs using the load_jobs method. This will scan the excel sheet and assign to "jobs"    
-    # jobs = ast.load_jobs()
+    jobs = ast.load_jobs()
     
-    # ast.batch_ast()
+    ast.batch_ast()
     
     ast.re_load_failed_jobs_V2()
     
     ast.batch_ast()
     
-    # ast.re_batch_failed_ast()
-
     print("Main: AST Factory COMPLETE")
     logger.info("Main: AST Factory COMPLETE")
 
