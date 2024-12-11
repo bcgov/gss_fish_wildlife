@@ -1,0 +1,20 @@
+# Find Only Coniferous Stands In VRI Data
+
+### From the Client:
+
+**"Conifer stand – I looked up the definition of what a conifer stand is to be sure – in our case, a conifer stand is any stand with less than 25% deciduous species.
+This means that we can still have deciduous species in the SPEC_CD_1 to SPEC_CD_6 fields of the VRI. 
+
+Broadleaf species are "D", "DR", "DG","DM","U", "UP", "A", "AC", "ACB", "ACT", "AX", "AT", "R", "RA", "E", "EA", "EXP", "EP", "EW","G","GP", "M", "MB", "MV", "Q", "QG", "XH", "V", "VB", "VP", "W", "WS", "WA", "WB", "WD", "WP", "WT","ZH"**
+
+So for any given polygon, if any of the species code listed above are in any of the SPEC_CD_1 to SPEC_CD_6 fields AND add up to more than 25% in the SPEC_PCT_1 to SPEC_PCT_6 fields combined, then we would drop that polygon. "
+
+
+The python script should iterate through each of Species Code 1 - Species Code 6
+If the species code contains a broadleaf species, it should read the percentage for that column. (Species_1_PCT)
+if the species_pct is greater than 25%, delete the row.
+if the species_pct is less than 25%, read the next species code (Species_Code_2).
+If THAT species code contains a broadleaf species, add that value to the first broadleaf species percentage (if there was one)
+If the new total is greater than 25%, delete the row.
+Continue to iterate over each column 1 - 6 until all broadleaf species polygons of greater than 25% are eliminated.
+
