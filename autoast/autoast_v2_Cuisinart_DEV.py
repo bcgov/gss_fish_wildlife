@@ -35,10 +35,10 @@ from tqdm import tqdm
 import sys
 import time
 
-# Test Comment
+
 
 ## *** INPUT YOUR EXCEL FILE NAME HERE ***
-excel_file = 'Cariboo_replacement_jobs.xlsx'
+excel_file = 'Cariboo_replacement_6_jobs.xlsx'
 
 # Set the job timeout further down. Use CNTL + F to search for JOB_TIMEOUT
 
@@ -453,12 +453,12 @@ class AST_FACTORY:
             # Update the ast condition for the specific job to the new condition (failed, queued, complete)
             ws.cell(row=excel_row_index, column=ast_condition_index, value=condition)
 
-            # # if the condition in AST_CONDITION_COLUMN is 'Requeued" then go to the dont overwrite output column and change false to true
-            # if condition == 'Requeued':
-            #     # print(f"Add Job Result - Job {job_index} failed, updating condition to 'Requeued'.  **CHANGED JOB INDEX +1 to JOB INDEX ***") #NOTE CHANGED JOB INDEX + 1 to JOB INDEX
-            #     self.logger.info(f"Add Job Result - Job {job_index} (Row {excel_row_index})  updating condition to 'Requeued'.") 
-            #     ws.cell(row=excel_row_index, column=dont_overwrite_outputs_index, value="True")
-            #     self.logger.info(f"Add Job Result - Job {job_index} (Row {excel_row_index})  updating dont_overwrite_outputs to 'True'.")
+            # if the condition in AST_CONDITION_COLUMN is 'Requeued" then go to the dont overwrite output column and change false to true
+            if condition == 'Requeued':
+                # print(f"Add Job Result - Job {job_index} failed, updating condition to 'Requeued'.  **CHANGED JOB INDEX +1 to JOB INDEX ***") #NOTE CHANGED JOB INDEX + 1 to JOB INDEX
+                self.logger.info(f"Add Job Result - Job {job_index} (Row {excel_row_index})  updating condition to 'Requeued'.") 
+                ws.cell(row=excel_row_index, column=dont_overwrite_outputs_index, value="True")
+                self.logger.info(f"Add Job Result - Job {job_index} (Row {excel_row_index})  updating dont_overwrite_outputs to 'True'.")
             
             # Save the workbook with the updated condition
             self.logger.info(f"Add Job Result - Updated Job {job_index} with condition '{condition}'.")
@@ -560,7 +560,7 @@ class AST_FACTORY:
                 self.logger.error(f"Batch Ast: Job {job_index} exceeded timeout. Marking as Failed. Failed counter is {timeout_failed_counter}")
                 
             else:
-                # Get the result of the job from (return_dict). 
+                # Get the result of the job from return_dict. 
                 # If the result is 'Success', increment the success_counter and call the add_job_result method to mark the job as 'COMPLETE'
                 
                 result = return_dict.get(job_index)
@@ -591,7 +591,7 @@ class AST_FACTORY:
     
 
 
-# This is the newer version of the re_load_failed_jobs function from the autoastv2Script unedited
+
 # NOTE ** Reload failed jobs may be able to be incorporated into load failed jobs to tighten up the script
 #RELOAD JOBS
     def re_load_failed_jobs_V2(self):
@@ -675,12 +675,12 @@ class AST_FACTORY:
 
                     # Skip if marked as "COMPLETE"
                     if ast_condition.upper() == 'COMPLETE':
-                        print(f"Re Load Failed Jobs: Skipping job {job_index} as it is marked COMPLETE.")
+                        print(f"Re Load Failed Jobs: Skipping job {job_index} as it is marked {ast_condition}.")
                         self.logger.info(f"Re Load Failed Jobs: Adding Complete to dictionary Skipping job {job_index} as it is marked COMPLETE.")
                         # continue  
-                        # ast_condition = 'COMPLETE'    
+                        ast_condition = 'COMPLETE'    
                     
-                    # **Only requeue jobs that are marked as 'FAILED'**
+                    # Change ast condition to requeued if the job is failed
                     elif ast_condition.upper() == 'FAILED':
                         self.logger.info(f"Re Load Failed Jobs: Requeuing {job_index} as it is marked Failed.")
                         ast_condition = 'Requeued'
@@ -701,6 +701,10 @@ class AST_FACTORY:
                     try:
                         self.add_job_result(job_index, ast_condition)
                         self.logger.info(f"Re load Jobs - Added job condition '{ast_condition}' for job {job_index} to jobs list")
+                    # Added Dec 12th
+                        # Save the workbook with the updated condition
+                        self.logger.info(f"Reload Failed Jobs - Saving Job Index ({job_index}) with new condition.")
+                        wb.save(self.queuefile)
                     except Exception as e:
                         print(f"Error updating Excel sheet at row {job_index}: {e}")
                         self.logger.error(f"Re load Jobs - Error updating Excel sheet at row {job_index}: {e}")
@@ -708,30 +712,41 @@ class AST_FACTORY:
                         continue
                         
                         
-                    # Check the condition of DONT_OVERWRITE_OUTPUTS
-                    current_value = job.get(self.DONT_OVERWRITE_OUTPUTS, '')
+                    # # Check the condition of DONT_OVERWRITE_OUTPUTS
+                    # current_value = job.get(self.DONT_OVERWRITE_OUTPUTS, '')
 
-                    # If DONT_OVERWRITE_OUTPUTS is anything but True, change it to 'True'
-                    if current_value != 'True':
-                        # Log the current state before changing
-                        if current_value == 'False':
-                            print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is False, changing to True")
-                            self.logger.info(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is False, changing to True")
-                        elif current_value == '':
-                            print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is empty, changing to True")
-                            self.logger.error(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is empty, changing to True")
-                        else:
-                            print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is '{current_value}', changing to True")
-                            self.logger.warning(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is '{current_value}', changing to True")
+                    # # If DONT_OVERWRITE_OUTPUTS is anything but True, change it to 'True'
+                    # if current_value != 'True':
+                    #     print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is '{current_value}', changing to True")
+                    #     self.logger.warning(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is '{current_value}', changing to True")
+                    #     job[self.DONT_OVERWRITE_OUTPUTS] = "True"
                         
-                        # Set the value to 'True'
-                        job[self.DONT_OVERWRITE_OUTPUTS] = "True"
+                    #     # Added Dec 12th
+                    #     # Save the workbook with the updated condition
+                    #     self.logger.info(f"Reload Failed Jobs - Saving Job Index ({job_index}) with new condition.")
+                    #     wb.save(self.queuefile)
+
+                        
+                        
+                    #     # # Log the current state before changing
+                    #     # if current_value == 'False':
+                    #     #     print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is False, changing to True")
+                    #     #     self.logger.info(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is False, changing to True")
+                    #     # elif current_value == '':
+                    #     #     print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is empty, changing to True")
+                    #     #     self.logger.error(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is empty, changing to True")
+                    #     # else:
+                    #     #     print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is '{current_value}', changing to True")
+                    #     #     self.logger.warning(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is '{current_value}', changing to True")
+                        
+                    #     # # Set the value to 'True'
+                    #     # job[self.DONT_OVERWRITE_OUTPUTS] = "True"
                     
-                    # If DONT_OVERWRITE_OUTPUTS is already 'True, don't change it. 
-                    else:
-                        # If it's already 'True', log that no change is needed
-                        print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is already True, no change needed")
-                        self.logger.info(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is already True, no change needed")
+                    # # If DONT_OVERWRITE_OUTPUTS is already 'True, don't change it. 
+                    # else:
+                    #     # If it's already 'True', log that no change is needed
+                    #     print(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is already True, no change needed")
+                    #     self.logger.info(f"Re Load Failed Jobs: Job {job_index} DONT_OVERWRITE_OUTPUTS is already True, no change needed")
 
                     # Add the job to the jobs list after all checks and processing
                     self.jobs.append(job)
@@ -747,7 +762,7 @@ class AST_FACTORY:
                     
                     print(f"Re Load Jobs - Job dictionary is {job}")
                     self.logger.info(f"Re load Jobs - Job {job_index} dictionary is {job}")
-                                
+                            
             except FileNotFoundError as e:
                 print(f"Error: Queue file not found - {e}")
                 self.logger.error(f"Re Load Failed Jobs Error: Queue file not found - {e}")
