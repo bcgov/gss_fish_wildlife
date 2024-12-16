@@ -34,11 +34,15 @@ import multiprocessing as mp
 from tqdm import tqdm
 import sys
 import time
+from logging_setup import setup_logging
+from database_connection import setup_bcgw
+from mp_worker import process_job_mp
+from toolbox_import import import_ast
 
 
 
 ## *** INPUT YOUR EXCEL FILE NAME HERE ***
-excel_file = 'Cariboo_replacement_6_jobs.xlsx'
+excel_file = 'alan_jobs.xlsx'
 
 # Set the job timeout further down. Use CNTL + F to search for JOB_TIMEOUT
 
@@ -47,68 +51,68 @@ NUM_CPUS = mp.cpu_count()
 ###############################################################################################################################################################################
 # Set up logging
 
-def setup_logging():
-    ''' Set up logging for the script '''
-    # Create the log folder filename
-    log_folder = f'autoast_logs_{datetime.datetime.now().strftime("%Y%m%d")}'
+# def setup_logging():
+#     ''' Set up logging for the script '''
+#     # Create the log folder filename
+#     log_folder = f'autoast_logs_{datetime.datetime.now().strftime("%Y%m%d")}'
 
-    # Create the log folder in the current directory if it doesn't exits
-    if not os.path.exists(log_folder):
-        os.mkdir(log_folder)
+#     # Create the log folder in the current directory if it doesn't exits
+#     if not os.path.exists(log_folder):
+#         os.mkdir(log_folder)
     
-    # Check if the log folder was created successfully
-    assert os.path.exists(log_folder), "Error creating log folder, check permissions and path"
+#     # Check if the log folder was created successfully
+#     assert os.path.exists(log_folder), "Error creating log folder, check permissions and path"
 
-    # Create the log file path with the date and time appended
-    log_file = os.path.join(log_folder, f'ast_log_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
+#     # Create the log file path with the date and time appended
+#     log_file = os.path.join(log_folder, f'ast_log_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
 
 
 
-    # Set up logging config to DEBUG level
-    logging.basicConfig(filename=log_file, 
-                        level=logging.DEBUG, 
-                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+#     # Set up logging config to DEBUG level
+#     logging.basicConfig(filename=log_file, 
+#                         level=logging.DEBUG, 
+#                         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    # Create the logger object and set to the current file name
-    logger = logging.getLogger(__name__)
+#     # Create the logger object and set to the current file name
+#     logger = logging.getLogger(__name__)
 
-    print("Logging set up")
-    logger.info("Logging set up")
+#     print("Logging set up")
+#     logger.info("Logging set up")
 
-    print("Starting Script")
-    logger.info("Starting Script")
+#     print("Starting Script")
+#     logger.info("Starting Script")
     
-    return logger
+#     return logger
 ###############################################################################################################################################################################
 
 
 
-def import_ast(logger):
-    # Get the toolbox path from environment variables
-    ast_toolbox = os.getenv('TOOLBOX') # File path 
+# def import_ast(logger):
+#     # Get the toolbox path from environment variables
+#     ast_toolbox = os.getenv('TOOLBOX') # File path 
 
-    if ast_toolbox is None:
-        print("Unable to find the toolbox. Check the path in .env file")
-        logger.error("Unable to find the toolbox. Check the path in .env file")
-        exit() 
+#     if ast_toolbox is None:
+#         print("Unable to find the toolbox. Check the path in .env file")
+#         logger.error("Unable to find the toolbox. Check the path in .env file")
+#         exit() 
 
-    # Import the toolbox
-    try:
-        arcpy.ImportToolbox(ast_toolbox)
-        print(f"AST Toolbox imported successfully.")
-        logger.info(f"AST Toolbox imported successfully.")
-    except Exception as e:
-        print(f"Error importing toolbox: {e}")
-        logger.error(f"Error importing toolbox: {e}")
-        exit()
+#     # Import the toolbox
+#     try:
+#         arcpy.ImportToolbox(ast_toolbox)
+#         print(f"AST Toolbox imported successfully.")
+#         logger.info(f"AST Toolbox imported successfully.")
+#     except Exception as e:
+#         print(f"Error importing toolbox: {e}")
+#         logger.error(f"Error importing toolbox: {e}")
+#         exit()
 
-    # Assign the shapefile template for FW Setup to a variable
-    template = os.getenv('TEMPLATE') # File path in .env
-    if template is None:
-        print("Unable to find the template. Check the path in .env file")
-        logger.error("Unable to find the template. Check the path in .env file")
+#     # Assign the shapefile template for FW Setup to a variable
+#     template = os.getenv('TEMPLATE') # File path in .env
+#     if template is None:
+#         print("Unable to find the template. Check the path in .env file")
+#         logger.error("Unable to find the template. Check the path in .env file")
         
-    return template
+#     return template
     
 
 ###############################################################################################################################################################################
@@ -116,72 +120,72 @@ def import_ast(logger):
 # Set up the database connection
 #
 ###############################################################################################################################################################################
-def setup_bcgw(logger):
-    # Get the secret file containing the database credentials
-    SECRET_FILE = os.getenv('SECRET_FILE')
+# def setup_bcgw(logger):
+#     # Get the secret file containing the database credentials
+#     SECRET_FILE = os.getenv('SECRET_FILE')
 
-    # If secret file found, load the secret file and display a print message, if not found display an error message
-    if SECRET_FILE:
-        load_dotenv(SECRET_FILE)
-        print(f"Secret file {SECRET_FILE} found")
-        logger.info(f"Secret file {SECRET_FILE} found")
-    else:
-        print("Secret file not found")
-        logger.error("Secret file not found")
+#     # If secret file found, load the secret file and display a print message, if not found display an error message
+#     if SECRET_FILE:
+#         load_dotenv(SECRET_FILE)
+#         print(f"Secret file {SECRET_FILE} found")
+#         logger.info(f"Secret file {SECRET_FILE} found")
+#     else:
+#         print("Secret file not found")
+#         logger.error("Secret file not found")
 
-    # Assign secret file data to variables    
-    DB_USER = os.getenv('BCGW_USER')
-    DB_PASS = os.getenv('BCGW_PASS')
+#     # Assign secret file data to variables    
+#     DB_USER = os.getenv('BCGW_USER')
+#     DB_PASS = os.getenv('BCGW_PASS')
     
 
-    # If DB_USER and DB_PASS found display a print message, if not found display an error message
-    if DB_USER and DB_PASS:
-        print(f"Database user {DB_USER} and password found")
-        logger.info(f"Database user {DB_USER} and password found")
-    else:
-        print("Database user and password not found")
-        logger.error("Database user and password not found")
+#     # If DB_USER and DB_PASS found display a print message, if not found display an error message
+#     if DB_USER and DB_PASS:
+#         print(f"Database user {DB_USER} and password found")
+#         logger.info(f"Database user {DB_USER} and password found")
+#     else:
+#         print("Database user and password not found")
+#         logger.error("Database user and password not found")
 
-    # Define current path of the executing script
-    current_path = os.path.dirname(os.path.realpath(__file__))
+#     # Define current path of the executing script
+#     current_path = os.path.dirname(os.path.realpath(__file__))
 
-    # Create the connection folder
-    connection_folder = 'connection'
-    connection_folder = os.path.join(current_path, connection_folder)
+#     # Create the connection folder
+#     connection_folder = 'connection'
+#     connection_folder = os.path.join(current_path, connection_folder)
 
-    # Check for the existance of the connection folder and if it doesn't exist, print an error and create a new connection folder
-    if not os.path.exists(connection_folder):
-        print("Connection folder not found, creating new connection folder")
-        logger.info("Connection folder not found, creating new connection folder")
-        os.mkdir(connection_folder)
+#     # Check for the existance of the connection folder and if it doesn't exist, print an error and create a new connection folder
+#     if not os.path.exists(connection_folder):
+#         print("Connection folder not found, creating new connection folder")
+#         logger.info("Connection folder not found, creating new connection folder")
+#         os.mkdir(connection_folder)
 
-    # Check for an existing bcgw connection, if there is one, remove it
-    if os.path.exists(os.path.join(connection_folder, 'bcgw.sde')):
-        os.remove(os.path.join(connection_folder, 'bcgw.sde'))
+#     # Check for an existing bcgw connection, if there is one, remove it
+#     if os.path.exists(os.path.join(connection_folder, 'bcgw.sde')):
+#         os.remove(os.path.join(connection_folder, 'bcgw.sde'))
 
-    # Create a bcgw connection
-    bcgw_con = arcpy.management.CreateDatabaseConnection(connection_folder,
-                                                        'bcgw.sde',
-                                                        'ORACLE',
-                                                        'bcgw.bcgov/idwprod1.bcgov',
-                                                        'DATABASE_AUTH',
-                                                        DB_USER,
-                                                        DB_PASS,
-                                                        'DO_NOT_SAVE_USERNAME')
+#     # Create a bcgw connection
+#     bcgw_con = arcpy.management.CreateDatabaseConnection(connection_folder,
+#                                                         'bcgw.sde',
+#                                                         'ORACLE',
+#                                                         'bcgw.bcgov/idwprod1.bcgov',
+#                                                         'DATABASE_AUTH',
+#                                                         DB_USER,
+#                                                         DB_PASS,
+#                                                         'DO_NOT_SAVE_USERNAME')
 
-    print("new db connection created")
-    logger.info("new db connection created")
+#     print("new db connection created")
+#     logger.info("new db connection created")
 
 
-    arcpy.env.workspace = bcgw_con.getOutput(0)
+#     arcpy.env.workspace = bcgw_con.getOutput(0)
 
-    print("workspace set to bcgw connection")
-    logger.info("workspace set to bcgw connection")
+#     print("workspace set to bcgw connection")
+#     logger.info("workspace set to bcgw connection")
     
-    secrets = [DB_USER, DB_PASS]
+#     secrets = [DB_USER, DB_PASS]
     
-    return secrets
-###############################################################################################################################################################################
+#     return secrets
+# ###############################################################################################################################################################################
 
 class AST_FACTORY:
     ''' AST_FACTORY creates and manages status tool runs '''
@@ -937,144 +941,144 @@ class AST_FACTORY:
 
 ###############################################################################################################################################################################
 
-def process_job_mp(ast_instance, job, job_index, current_path, return_dict):
-    import os
-    import arcpy
-    import datetime
-    import logging
-    import multiprocessing as mp
-    import traceback
+# def process_job_mp(ast_instance, job, job_index, current_path, return_dict):
+#     import os
+#     import arcpy
+#     import datetime
+#     import logging
+#     import multiprocessing as mp
+#     import traceback
 
-    logger = logging.getLogger(f"Process Job Mp: worker_{job_index}")
+#     logger = logging.getLogger(f"Process Job Mp: worker_{job_index}")
 
-    logger.info("##########################################################################################################################")
-    logger.info("#")
-    logger.info("Running Multiprocessing Worker Function.....")
-    logger.info("#")
-    logger.info("##########################################################################################################################")
+#     logger.info("##########################################################################################################################")
+#     logger.info("#")
+#     logger.info("Running Multiprocessing Worker Function.....")
+#     logger.info("#")
+#     logger.info("##########################################################################################################################")
 
-    print(f"Process Job Mp: Processing job {job_index}: {job}")
+#     print(f"Process Job Mp: Processing job {job_index}: {job}")
 
-    # Set up logging folder in the worker process
-    logger.info(f"Process Job Mp: Worker process {mp.current_process().pid} started for job {job_index}")
-    log_folder = os.path.join(current_path, f'autoast_logs_{datetime.datetime.now().strftime("%Y%m%d")}')
-    if not os.path.exists(log_folder):
-        os.mkdir(log_folder)
-        logger.info(f"Process Job Mp: Created log folder {log_folder}")
+#     # Set up logging folder in the worker process
+#     logger.info(f"Process Job Mp: Worker process {mp.current_process().pid} started for job {job_index}")
+#     log_folder = os.path.join(current_path, f'autoast_logs_{datetime.datetime.now().strftime("%Y%m%d")}')
+#     if not os.path.exists(log_folder):
+#         os.mkdir(log_folder)
+#         logger.info(f"Process Job Mp: Created log folder {log_folder}")
 
-    # Generate a unique log file name per process
-    log_file = os.path.join(
-        log_folder,
-        f'ast_worker_log_{datetime.datetime.now().strftime("%Y_%m_%d_%H%M%S")}_{mp.current_process().pid}_job_{job_index}.log'
-    )
-    logger.info(f"Process Job Mp: Log file for worker process is: {log_file}")
+#     # Generate a unique log file name per process
+#     log_file = os.path.join(
+#         log_folder,
+#         f'ast_worker_log_{datetime.datetime.now().strftime("%Y_%m_%d_%H%M%S")}_{mp.current_process().pid}_job_{job_index}.log'
+#     )
+#     logger.info(f"Process Job Mp: Log file for worker process is: {log_file}")
     
-    # Set up logging config in the worker process
-    logging.basicConfig(
-        filename=log_file,
-        level=logging.DEBUG,  # Set level to DEBUG to capture all messages
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
+#     # Set up logging config in the worker process
+#     logging.basicConfig(
+#         filename=log_file,
+#         level=logging.DEBUG,  # Set level to DEBUG to capture all messages
+#         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+#     )
 
-    try:
-        # Re-import the toolbox in each process
-        ast_toolbox = os.getenv('TOOLBOX')  # Get the toolbox path from environment variables
-        if ast_toolbox:
-            arcpy.ImportToolbox(ast_toolbox)
-            print(f"Process Job Mp: AST Toolbox imported successfully in worker.")
-            logger.info(f"Process Job Mp: AST Toolbox imported successfully in worker.")
-        else:
-            raise ImportError("Process Job Mp: AST Toolbox path not found. Ensure TOOLBOX path is set correctly in environment variables.")
+#     try:
+#         # Re-import the toolbox in each process
+#         ast_toolbox = os.getenv('TOOLBOX')  # Get the toolbox path from environment variables
+#         if ast_toolbox:
+#             arcpy.ImportToolbox(ast_toolbox)
+#             print(f"Process Job Mp: AST Toolbox imported successfully in worker.")
+#             logger.info(f"Process Job Mp: AST Toolbox imported successfully in worker.")
+#         else:
+#             raise ImportError("Process Job Mp: AST Toolbox path not found. Ensure TOOLBOX path is set correctly in environment variables.")
 
-        # Prepare parameters
-        params = []
+#         # Prepare parameters
+#         params = []
 
-        # Convert 'true'/'false' strings to booleans
-        for param in AST_FACTORY.AST_PARAMETERS.values():
-            value = job.get(param)
-            if isinstance(value, str) and value.lower() in ['true', 'false']:
-                value = True if value.lower() == 'true' else False
-            params.append(value)
+#         # Convert 'true'/'false' strings to booleans
+#         for param in AST_FACTORY.AST_PARAMETERS.values():
+#             value = job.get(param)
+#             if isinstance(value, str) and value.lower() in ['true', 'false']:
+#                 value = True if value.lower() == 'true' else False
+#             params.append(value)
         
-        #NOTE: This is where the output directory is set
-        # Get the output directory from the job
-        output_directory = job.get('output_directory')
+#         #NOTE: This is where the output directory is set
+#         # Get the output directory from the job
+#         output_directory = job.get('output_directory')
 
-        # # If output_directory is not provided
-        # if not output_directory:
-        #     # Check if 'output directory is same as input directory' is set to True
-        #     output_same_as_input = job.get('output_directory_is_same_as_input_directory')
-        #     if output_same_as_input == True or str(output_same_as_input).lower() == 'true':
-        #         # Use the input_directory as output_directory
-        #         #NOTE This handling is already present in the AST Tool
-        #         output_directory = job.get('input_directory')
-        #         if not output_directory:
-        #             raise ValueError(f"Process Job Mp: 'Input Directory' is required when 'Output Directory is same as Input Directory' is True for job {job_index}.")
-        #         job['output_directory'] = output_directory
-        #         logger.info(f"Process Job Mp: Output directory is same as input directory for job {job_index}. Using: {output_directory}")
-        #     else:
-        #         # If there was no output directory provided and 'output directory is same as input directory' is False
-        #         # Set the default output directory to a default location (This can be changed later) This will prevent the job from failing due to a user error
+#         # # If output_directory is not provided
+#         # if not output_directory:
+#         #     # Check if 'output directory is same as input directory' is set to True
+#         #     output_same_as_input = job.get('output_directory_is_same_as_input_directory')
+#         #     if output_same_as_input == True or str(output_same_as_input).lower() == 'true':
+#         #         # Use the input_directory as output_directory
+#         #         #NOTE This handling is already present in the AST Tool
+#         #         output_directory = job.get('input_directory')
+#         #         if not output_directory:
+#         #             raise ValueError(f"Process Job Mp: 'Input Directory' is required when 'Output Directory is same as Input Directory' is True for job {job_index}.")
+#         #         job['output_directory'] = output_directory
+#         #         logger.info(f"Process Job Mp: Output directory is same as input directory for job {job_index}. Using: {output_directory}")
+#         #     else:
+#         #         # If there was no output directory provided and 'output directory is same as input directory' is False
+#         #         # Set the default output directory to a default location (This can be changed later) This will prevent the job from failing due to a user error
                 
-        #         #DELETE This was put in for testing so that it's easy to delete all outputs from one place at once. 
-        #         DEFAULT_DIR = os.getenv('DIR')
-        #         output_directory = os.path.join("T:", f'job{job_index}')
-        #         job['output_directory'] = output_directory
-        #         logger.warning(f"Process Job Mp: Output directory not provided for job {job_index}. Using default path: {output_directory}")
-        # else:
-        #     # Output directory is provided
-        #     job['output_directory'] = output_directory
+#         #         #DELETE This was put in for testing so that it's easy to delete all outputs from one place at once. 
+#         #         DEFAULT_DIR = os.getenv('DIR')
+#         #         output_directory = os.path.join("T:", f'job{job_index}')
+#         #         job['output_directory'] = output_directory
+#         #         logger.warning(f"Process Job Mp: Output directory not provided for job {job_index}. Using default path: {output_directory}")
+#         # else:
+#         #     # Output directory is provided
+#         #     job['output_directory'] = output_directory
 
-        # Create the output directory if the user put in a path but failed to create the output directory in Windows explorer
-        if output_directory and not os.path.exists(output_directory):
-            try:
-                os.makedirs(output_directory)
-                print(f"Output directory '{output_directory}' created.")
-                logger.warning(f"Process Job Mp: Output directory doesn't exist for job ({job_index}).")
-                logger.warning(f"\n")
-                logger.warning(f"'{output_directory}' created.")
-            except OSError as e:
-                raise RuntimeError(f"Failed to create the output directory '{output_directory}'. Check your permissions: {e}")
+#         # Create the output directory if the user put in a path but failed to create the output directory in Windows explorer
+#         if output_directory and not os.path.exists(output_directory):
+#             try:
+#                 os.makedirs(output_directory)
+#                 print(f"Output directory '{output_directory}' created.")
+#                 logger.warning(f"Process Job Mp: Output directory doesn't exist for job ({job_index}).")
+#                 logger.warning(f"\n")
+#                 logger.warning(f"'{output_directory}' created.")
+#             except OSError as e:
+#                 raise RuntimeError(f"Failed to create the output directory '{output_directory}'. Check your permissions: {e}")
 
 
-        # Ensure that region has been entered otherwise job will fail
-        if not job.get('region'):
-            raise ValueError("Process Job Mp: Region is required and was not provided. Job Failed")
+#         # Ensure that region has been entered otherwise job will fail
+#         if not job.get('region'):
+#             raise ValueError("Process Job Mp: Region is required and was not provided. Job Failed")
 
-        # Log the parameters being used
-        logger.debug(f"Process Job Mp: Job Parameters: {params}")
+#         # Log the parameters being used
+#         logger.debug(f"Process Job Mp: Job Parameters: {params}")
 
-        # Run the ast tool
-        logger.info("Process Job Mp: Running MakeAutomatedStatusSpreadsheet_ast...")
-        arcpy.MakeAutomatedStatusSpreadsheet_ast(*params)
-        logger.info("Process Job Mp: MakeAutomatedStatusSpreadsheet_ast completed successfully.")
-        ast_instance.add_job_result(job_index, 'COMPLETE')
+#         # Run the ast tool
+#         logger.info("Process Job Mp: Running MakeAutomatedStatusSpreadsheet_ast...")
+#         arcpy.MakeAutomatedStatusSpreadsheet_ast(*params)
+#         logger.info("Process Job Mp: MakeAutomatedStatusSpreadsheet_ast completed successfully.")
+#         ast_instance.add_job_result(job_index, 'COMPLETE')
 
-        # Capture and log arcpy messages
-        logger.info("Process Job Mp: Capturing arcpy messages...")
-        arcpy_messages = arcpy.GetMessages(0)
-        arcpy_warnings = arcpy.GetMessages(1)
-        arcpy_errors = arcpy.GetMessages(2)
+#         # Capture and log arcpy messages
+#         logger.info("Process Job Mp: Capturing arcpy messages...")
+#         arcpy_messages = arcpy.GetMessages(0)
+#         arcpy_warnings = arcpy.GetMessages(1)
+#         arcpy_errors = arcpy.GetMessages(2)
 
-        if arcpy_messages:
-            logger.info(f'arcpy messages: {arcpy_messages}')
-        if arcpy_warnings:
-            logger.warning(f'arcpy warnings: {arcpy_warnings}')
-        if arcpy_errors:
-            logger.error(f'arcpy errors: {arcpy_errors}')
+#         if arcpy_messages:
+#             logger.info(f'arcpy messages: {arcpy_messages}')
+#         if arcpy_warnings:
+#             logger.warning(f'arcpy warnings: {arcpy_warnings}')
+#         if arcpy_errors:
+#             logger.error(f'arcpy errors: {arcpy_errors}')
         
-        # Indicate success
-        return_dict[job_index] = 'Success'  
+#         # Indicate success
+#         return_dict[job_index] = 'Success'  
 
-    except Exception as e:
-        # Indicate failure
-        return_dict[job_index] = 'Failed'
-        logger.error(f"Process Job Mp: Job {job_index} failed with error: {e}")
-        logger.debug(traceback.format_exc())
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        traceback_str = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
-        logger.error(f"Process Job Mp: Job {job_index} failed with error: {e}")
-        logger.error(f"Process Job Mp: Traceback:\n{traceback_str}")
+#     except Exception as e:
+#         # Indicate failure
+#         return_dict[job_index] = 'Failed'
+#         logger.error(f"Process Job Mp: Job {job_index} failed with error: {e}")
+#         logger.debug(traceback.format_exc())
+#         exc_type, exc_value, exc_traceback = sys.exc_info()
+#         traceback_str = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+#         logger.error(f"Process Job Mp: Job {job_index} failed with error: {e}")
+#         logger.error(f"Process Job Mp: Traceback:\n{traceback_str}")
 
 
 #################################################################################################################################################################################
