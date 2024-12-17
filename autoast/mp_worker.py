@@ -1,3 +1,11 @@
+import sys
+
+
+
+
+
+
+
 def process_job_mp(ast_instance, job, job_index, current_path, return_dict):
     import os
     import arcpy
@@ -5,6 +13,7 @@ def process_job_mp(ast_instance, job, job_index, current_path, return_dict):
     import logging
     import multiprocessing as mp
     import traceback
+   
 
     logger = logging.getLogger(f"Process Job Mp: worker_{job_index}")
 
@@ -51,7 +60,7 @@ def process_job_mp(ast_instance, job, job_index, current_path, return_dict):
         params = []
 
         # Convert 'true'/'false' strings to booleans
-        for param in AST_FACTORY.AST_PARAMETERS.values():
+        for param in ast_instance.AST_PARAMETERS.values(): # use the ast_instance that is passed into the function to access the ast factory parameters
             value = job.get(param)
             if isinstance(value, str) and value.lower() in ['true', 'false']:
                 value = True if value.lower() == 'true' else False
