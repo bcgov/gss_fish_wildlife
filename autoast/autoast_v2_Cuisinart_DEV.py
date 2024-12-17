@@ -43,7 +43,7 @@ from aoi_utilities import build_aoi_from_shp
 
 
 ## *** INPUT YOUR EXCEL FILE NAME HERE ***
-excel_file = '2_jobs.xlsx'
+excel_file = 'Cariboo_replacement_jobs_2_of2.xlsx'
 
 # Set the job timeout further down. Use CNTL + F to search for JOB_TIMEOUT
 

@@ -150,15 +150,12 @@ class TraplineBoundaries(object):
         '''
 
 
-
-        # addded .shp to trapline boundaries export
-        # moved the assignment of layout and maps to objects to the top of the script
-        # changed variable names so it is easier for others (namely me) to read
+        # Set up workspace and environment
 
         # Create or get the feature_layer object from ArcGIS Pro's content pane or the appropriate source
         aprx = arcpy.mp.ArcGISProject("CURRENT")
 
-        arcpy.env.overwriteOutput = False
+
 
         # Define paths for the directories 
         # arcpy.env.workspace = r'\\spatialfiles.bcgov\work\srm\nel\Local\Geomatics\Workarea\SharedWork\Trapline_Territories'
@@ -169,21 +166,23 @@ class TraplineBoundaries(object):
 
         # Set the workspace to the path
         arcpy.env.workspace = workspace
-
         
-        file_dir = os.path.join(workspace, year, file_num)
+                
+        # Set the overwriteOutput to True
+        arcpy.env.overwriteOutput = True
+
+        # Create the main directories
+        file_dir = os.path.join(workspace, year, "traplines", file_num)
         
         arcpy.AddMessage(f"Your Traplines directory is : {file_dir}")
         
-        kml_dir = os.path.join(workspace, 'Kml')
+        kml_dir = os.path.join(workspace, f'{file_num}.kml')
         aprx_dir = os.path.join(workspace, 'Aprx')
-        data_dir = os.path.join(workspace, 'Data')
-        pdf_dir = os.path.join(workspace, 'pdf')
+        data_dir = os.path.join(aprx_dir, 'Data')
+        pdf_dir = os.path.join(workspace)
 
         # Convert main maps and layers to objects early in the script so when others are working in the script, they can scroll to the top and confirm it has been assigned rather
         # than having to search through the script to find where it was assigned.
-
-        #NOTE: 
 
         map_obj = aprx.listMaps('Map')[0]
         layout = aprx.listLayouts("Layout")[0] 
@@ -200,8 +199,9 @@ class TraplineBoundaries(object):
         #         arcpy.AddMessage(f"Directory already exists: {directory}")
 
         # Create the main directories
-        create_directory(aprx_dir) # This is where the aprx and .shp files will be stored
         create_directory(file_dir) # This is where the pdf and .kml
+        create_directory(aprx_dir) # This is where the aprx and .shp files will be stored
+       
         # create_directory(data_dir)
         # create_directory(pdf_dir)
 
@@ -217,9 +217,7 @@ class TraplineBoundaries(object):
         #create_directory(pdf_subdir)
 
 
-        # Set up workspace and environment
-        arcpy.env.workspace = workspace
-        arcpy.env.overwriteOutput = True
+
 
         ################################################################################################################################
         #
@@ -250,21 +248,24 @@ class TraplineBoundaries(object):
         else:
             arcpy.AddMessage(f"         Definition query {expression} set for layer: {all_trapline_boundaries_obj}. Records returned: {count}")
 
-        # NOTE This could be a temp file rather than saving a shapefile
+
         
         # Specify the trapline boundary layer you want to export features from
-        application_trapline_boundary_path = os.path.join(data_dir, 'Scripting Data', 'Trapline_Boundaries_Export.shp')
-        arcpy.AddMessage(f"Trapline boundary path: {application_trapline_boundary_path}")
+        # application_trapline_boundary_path = os.path.join(data_dir, 'Scripting Data', 'Trapline_Boundaries_Export.shp')
+        # arcpy.AddMessage(f"Trapline boundary path: {application_trapline_boundary_path}")
 
-        # Specify the output file path for the exported feature
-        application_trapline_boundary = os.path.join(data_subdir, f'{file_num}.shp')
-        arcpy.AddMessage(f"Output feature path: {application_trapline_boundary}")
 
         ###########################################################################################################################################
         #
         # Step 3 - Export the Feature to a Shapefile
         #
         ###########################################################################################################################################
+
+
+
+        # Specify the output file path for the exported feature
+        application_trapline_boundary = os.path.join(data_dir, f'{file_num}.shp')
+        arcpy.AddMessage(f"Output feature path: {application_trapline_boundary}")
 
         # Create a feature layer to select the specific feature
         try:
@@ -325,9 +326,10 @@ class TraplineBoundaries(object):
         #NOTE used the all cabins layer in contents pane instead of the path
 
         # all_trapline_cabins_layer = os.path.join(data_dir, 'TRAPLINE_CABINS_Polygon.shp')
-        clipped_cabins_output = os.path.join(data_subdir, f'{file_num}_Cabins.shp')
-        arcpy.AddMessage
+        clipped_cabins_output = os.path.join(data_dir, f'{file_num}_Cabins.shp')
+        
         arcpy.AddMessage(f"Output feature path: {clipped_cabins_output}")
+        
         # Clip the "Trapline Cabins" layer based on the feature layer\
 
         arcpy.analysis.Clip("All Trapline Cabins", application_trapline_boundary, clipped_cabins_output)  # After the clip, the clipped cabins output path has now become a layer
@@ -389,7 +391,7 @@ class TraplineBoundaries(object):
         arcpy.AddMessage(f"Layer renamed to: {file_num} ({formatted_area})")
 
         # Create a new variable for Crown cabins string (for further operations if needed)
-        new_crown_cabins_str = f"{file_num}_Cabins_{Crown_Num_Values_String}" if Crown_Num_Values else "Trapline_Cabin_No_Values"
+        new_crown_cabins_str = f"{file_num} Cabins {Crown_Num_Values_String}" if Crown_Num_Values else "Trapline Cabin No Values"
         arcpy.AddMessage(f"New Crown cabins variable: {new_crown_cabins_str} created.")
 
         #Define the path to both of the Feature Layers ( Trapline Boundary and Trapline Cabins )
@@ -446,8 +448,8 @@ class TraplineBoundaries(object):
         map_obj.camera.setExtent(map_obj.camera.getExtent())  # Forces a redraw by resetting the map extent
 
         # Save aprx for trapline boundary map automation project to preserve changes and allow users to open the aprx to view map and make adjustments if required.
-        aprx.saveACopy(os.path.join(aprx_subdir, f'{file_num}.aprx'))
-        arcpy.AddMessage(f"ArcPro Project {file_num}.aprx has been saved successfully here: {aprx_subdir}")
+        aprx.saveACopy(os.path.join(aprx_dir, f'{file_num}.aprx'))
+        arcpy.AddMessage(f"ArcPro Project {file_num}.aprx has been saved successfully here: {aprx_dir}")
 
         arcpy.AddMessage("----------------------------------------------------")
         arcpy.AddMessage("----------------------------------------------------")
