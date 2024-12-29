@@ -36,7 +36,7 @@ import sys
 import time
 
 
-ll
+
 ## *** INPUT YOUR EXCEL FILE NAME HERE ***
 excel_file = 'Cariboo_replacement_1_job.xlsx'
 
