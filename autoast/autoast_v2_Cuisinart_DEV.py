@@ -434,7 +434,7 @@ class AST_FACTORY:
             ast_condition_index = header.index(self.AST_CONDITION_COLUMN) + 1  # +1 because Excel columns are 1-indexed
 
             # # Find the dont_overwrite_outputs column and assign it to the correct index
-            # dont_overwrite_outputs_index = header.index(self.DONT_OVERWRITE_OUTPUTS) + 1  # +1 because Excel columns are 1-indexed
+            dont_overwrite_outputs_index = header.index(self.DONT_OVERWRITE_OUTPUTS) + 1  # +1 because Excel columns are 1-indexed
             
             # Calculate the actual row index in Excel, +2 to account for header and 0-index
             excel_row_index = job_index + 2  # NOTE I changed this to +1 and it changes the ast_condition header row to Failed. So it must stay at +2
