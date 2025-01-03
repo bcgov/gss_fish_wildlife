@@ -1,23 +1,13 @@
 
 import os
-
 from openpyxl import Workbook, load_workbook
-from dotenv import load_dotenv
-import geopandas
 import arcpy
-import datetime
 import logging
 import traceback
-import subprocess
 import multiprocessing as mp
-from tqdm import tqdm
-import sys
-import time
-from logging_setup import setup_logging
-from database_connection import setup_bcgw
 from mp_worker import process_job_mp
-from toolbox_import import import_ast
 from aoi_utilities import build_aoi_from_shp
+from aoi_utilities import build_aoi_from_kml
 
 
 class AST_FACTORY:
@@ -90,12 +80,8 @@ class AST_FACTORY:
                 
                 for row in ws.iter_rows(min_row=2, max_col=None, values_only=True):
                     print(f'Row is {row}')
-                    
                     data.append(row)
                 
-
-
-            
                 
                 # Iterate over each row of data; enumerate to keep track of the row number in Excel
                 for job_index, row_data in enumerate(data):  
@@ -205,7 +191,7 @@ class AST_FACTORY:
             if feature_layer_path.lower().endswith('.kml'):
                 print('KML found, building AOI from KML')
                 self.logger.info('Classifying Input Type - KML found, building AOI from KML')
-                job['feature_layer'] = self.build_aoi_from_kml(feature_layer_path)
+                job['feature_layer'] = build_aoi_from_kml(job, feature_layer_path)
 
             elif feature_layer_path.lower().endswith('.shp'):
                 if job.get('file_number'):
@@ -366,7 +352,6 @@ class AST_FACTORY:
                 print(f"Batch Ast: Queued Job...Multiproccessing started......")
                 
 
-
         # Monitor and enforce timeouts
         timeout_failed_counter = 0
         success_counter = 0
@@ -426,7 +411,6 @@ class AST_FACTORY:
         self.logger.info('\n')    
         self.logger.info("Batch Ast Complete - Check separate worker log file for more details")
     
-
 
 
 # NOTE ** Reload failed jobs may be able to be incorporated into load failed jobs to tighten up the script
@@ -633,128 +617,7 @@ class AST_FACTORY:
             ws.cell(row=1, column=c).value = h
         wb.save(self.queuefile)
 
-    # def build_aoi_from_kml(self, aoi):
-    #     "Write shp file for temporary use"
-
-    #     # Ensure the KML file exists
-    #     if not os.path.exists(aoi):
-    #         raise FileNotFoundError(f"The KML file '{aoi}' does not exist.")
-
-    #     print("Building AOI from KML")
-    #     self.logger.info("Building AOI from KML")
-    #     from fiona.drvsupport import supported_drivers
-    #     supported_drivers['LIBKML'] = 'rw'
-    #     tmp = os.getenv('TEMP')
-    #     if not tmp:
-    #         raise EnvironmentError("TEMP environment variable is not set.")
-    #     bname = os.path.basename(aoi).split('.')[0]
-    #     fc = bname.replace(' ', '_')
-    #     out_name = os.path.join(tmp, bname + '.gdb')
-    #     if os.path.exists(out_name):
-    #         shutil.rmtree(out_name, ignore_errors=True)
-    #     df = geopandas.read_file(aoi)
-    #     df.to_file(out_name, layer=fc, driver='OpenFileGDB')
-
-    #     #DELETE
-    #     print(f' kml ouput is {out_name} / {fc}')
-    #     self.logger.info(f' kml ouput is {out_name} / {fc}')
-    #     return out_name + '/' + fc
-
-    # def build_aoi_from_shp(self, job, feature_layer_path):
-    #     """This is snippets of Mike Eastwoods FW Setup Script, if run FW Setup is set to true **Not sure if we need this
-    #     as an option or just make it standard.
-    #     This function will take the raw un-appended shapefile and run it through the FW Setup Script"""
-
-    #     # Mike Eastwoods FW Setup Script
-    #     print("Processing shapefile using FW Setup Script")
-    #     self.logger.info("Processing shapefile using FW Setup Script")
-        
-    #     fsj_workspace = os.getenv('FSJ_WORKSPACE')
-    #     arcpy.env.workspace = fsj_workspace
-    #     arcpy.env.overwriteOutput = False
-
-    #     # Check if there is a file path in Feature Layer
-    #     if feature_layer_path:
-    #         print(f"Processing feature layer: {feature_layer_path}")
-    #         self.logger.info(f"Processing feature layer: {feature_layer_path}")
-
-    #     # Check to see if a file number was entered in the excel sheet, if so, use it to name the output directory and authorize the build_aoi_from_shp function to run
-    #     file_number = job.get('file_number')
-
-    #     if not file_number:
-    #         raise ValueError("Error: File Number is required if you are putting in a shapefile that has not been processed in the FW Setup Tool.")
-    #     else:
-    #         print(f"Running FW Setup on File Number: {file_number}")
-    #         self.logger.info(f"Running FW Setup on File Number: {file_number}")
-
-    #     # Convert file_number to string and make it uppercase
-    #     file_number_str = str(file_number).upper()
-
-    #     # Calculate date variables
-    #     date = datetime.date.today()
-    #     year = str(date.year)
-
-    #     # Set variables
-    #     base = arcpy.env.workspace
-    #     baseYear = os.path.join(base, year)
-    #     outName = file_number_str
-    #     geometry = "POLYGON"
     
-    #     m = "SAME_AS_TEMPLATE"
-    #     z = "SAME_AS_TEMPLATE"
-    #     spatialReference = arcpy.Describe(template).spatialReference
-
-    #     # ===========================================================================
-    #     # Create Folders
-    #     # ===========================================================================
-
-    #     print("Creating FW Setup folders . . .")
-    #     self.logger.info("Creating FW Setup folders . . .")
-    #     outName = file_number_str
-
-    #     # Create path to folder location
-    #     fileFolder = os.path.join(baseYear, outName)
-    #     shapeFolder = fileFolder
-    #     outPath = shapeFolder
-    #     if os.path.exists(fileFolder):
-    #         print(outName + " folder already exists.")
-    #         self.logger.info(outName + " folder already exists.")
-    #     else:
-    #         os.mkdir(fileFolder)
-
-    #     # ===========================================================================
-    #     # Create Shapefile(s) and add them to the current map
-    #     # ===========================================================================
-
-    #     print("Creating Shapefiles using FW Setup . . .")
-    #     self.logger.info("Creating Shapefiles using FW Setup . . .")
-    #     if os.path.isfile(os.path.join(outPath, outName + ".shp")):
-    #         print(os.path.join(outPath, outName + ".shp") + " already exists")
-    #         self.logger.info(os.path.join(outPath, outName + ".shp") + " already exists")
-    #         print("Exiting without creating files")
-    #         self.logger.info("Exiting without creating files")
-    #         return os.path.join(outPath, outName + ".shp")
-    #     else:
-    #         # Creating template shapefile
-    #         create_shp = arcpy.management.CreateFeatureclass(outPath, outName, geometry, template, m, z, spatialReference)
-    #         # Append the newly created shapefile with area of interest
-    #         append_shp = arcpy.management.Append(feature_layer_path, create_shp, "NO_TEST")
-    #         print("Append Successful")
-    #         self.logger.info("Append Successful")
-    #         # Making filename for kml
-    #         create_kml = os.path.join(outPath, outName + ".kml")
-    #         # Make layer for kml to be converted from 
-    #         layer_shp = arcpy.management.MakeFeatureLayer(append_shp, outName)
-    #         # Populate the shapefile                          
-    #         arcpy.conversion.LayerToKML(layer_shp, create_kml)
-    #         # Send message to user that kml has been created
-    #         print("kml created: " + create_kml)
-    #         self.logger.info("kml created: " + create_kml)
-
-    #         print(f"FW Setup complete, returned shapefile is {os.path.join(outPath, outName + '.shp')}")
-    #         self.logger.info(f"FW Setup complete, returned shapefile is {os.path.join(outPath, outName + '.shp')}")
-
-    #         return os.path.join(outPath, outName + ".shp")
         
 
     def capture_arcpy_messages(self):

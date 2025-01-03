@@ -1,5 +1,5 @@
 # autoast is a script for batch processing the automated status tool
-# author: wburt
+# author: csostad and wburt
 # copyrite Governent of British Columbia
 # Copyright 2019 Province of British Columbia
 
@@ -16,35 +16,17 @@
 # limitations under the License.
 
 
-
-
-
-
 import os
-
-from openpyxl import Workbook, load_workbook
 from dotenv import load_dotenv
-import geopandas
-import arcpy
-import datetime
-import logging
-import traceback
-import subprocess
-import multiprocessing as mp
-from tqdm import tqdm
-import sys
-import time
 from logging_setup import setup_logging
 from database_connection import setup_bcgw
-from mp_worker import process_job_mp
 from toolbox_import import import_ast
-from aoi_utilities import build_aoi_from_shp
 from ast_factory import AST_FACTORY
 
 
 
 ## *** INPUT YOUR EXCEL FILE NAME HERE ***
-excel_file = '2_jobs.xlsx'
+excel_file = '1_shp_file_job.xlsx'
 
 
 

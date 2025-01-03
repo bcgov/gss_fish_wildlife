@@ -2,13 +2,43 @@
 import arcpy
 import os
 import datetime
-from dotenv import load_dotenv
-from logging_setup import setup_logging
 import geopandas
 import shutil
 
 # Assign the shapefile template for FW Setup to a variable
 template = os.getenv('TEMPLATE') # File path in .env
+
+# def classify_input_type(job, logger):
+#     '''Classify the input type and process accordingly.'''
+
+#     if job.get('feature_layer'):
+#         print(f'Feature layer found: {job["feature_layer"]}')
+#         logger.info(f'Classifying Input Type - Feature layer found: {job["feature_layer"]}')
+#         feature_layer_path = job['feature_layer']
+#         print(f"Processing feature layer: {feature_layer_path}")
+#         logger.info(f"Classifying Input Type - Processing feature layer: {feature_layer_path}")
+
+#         if feature_layer_path.lower().endswith('.kml'):
+#             print('KML found, building AOI from KML')
+#             logger.info('Classifying Input Type - KML found, building AOI from KML')
+#             job['feature_layer'] = build_aoi_from_kml(job, feature_layer_path)
+
+#         elif feature_layer_path.lower().endswith('.shp'):
+#             if job.get('file_number'):
+#                 print(f"File number found, running FW setup on shapefile: {feature_layer_path}")
+#                 logger.info(f"Classifying Input Type - File number found, running FW setup on shapefile: {feature_layer_path}")
+#                 new_feature_layer_path = build_aoi_from_shp(job, feature_layer_path)
+#                 job['feature_layer'] = new_feature_layer_path
+#             else:
+#                 print('No FW File Number provided for the shapefile, using original shapefile path')
+#                 logger.info('Classifying Input Type - No FW File Number provided, using original shapefile path')
+#         else:
+#             print(f"Unsupported feature layer format: {feature_layer_path}")
+#             logger.warning(f"Classifying Input Type - Unsupported feature layer format: {feature_layer_path} - Marking job as Failed")
+#             #add_job_result(job, 'Failed')
+#     else:
+#         print('No feature layer provided in job')
+#         logger.warning('Classifying Input Type - No feature layer provided in job')
 
 def build_aoi_from_kml(aoi, logger):
         "Write shp file for temporary use"

@@ -33,9 +33,6 @@ def setup_logging():
 
     print("Logging set up")
     logger.info("Logging set up")
-
-    print("Starting Script")
-    logger.info("Starting Script")
     
     return logger
 ###############################################################################################################################################################################

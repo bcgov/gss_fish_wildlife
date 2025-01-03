@@ -1,7 +1,7 @@
 import os
 import arcpy
 
-
+#NOTE - Need to remove the template portion in the future
 
 def import_ast(logger):
     # Get the toolbox path from environment variables
