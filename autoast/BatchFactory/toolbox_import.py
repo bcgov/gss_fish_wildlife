@@ -4,6 +4,7 @@ import arcpy
 #NOTE - Need to remove the template portion in the future
 
 def import_any_toolbox(logger):
+    print("Attempting to import the toolbox...")
     # Get the toolbox path from environment variables
     any_toolbox = os.getenv('TOOLBOX') # File path 
 
