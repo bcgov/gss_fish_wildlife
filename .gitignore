@@ -122,7 +122,6 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
 .venv
 env/
 venv/
@@ -161,7 +160,6 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 autoast/aoi.kml
-autoast/ast.atbx
 autoast/testScript.py
 autoast/connection/bcgw.bcgov.sde
 autoast/test.xlsx
