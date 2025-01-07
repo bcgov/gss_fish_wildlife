@@ -59,8 +59,19 @@ class BATCH_FACTORY:
                 print(f'Workbook loaded is {wb}')
                 
                 print("Loading worksheet.....")
-                ws = wb[self.XLSX_SHEET_NAME]
+                # Check if the sheet name exists, otherwise use the first worksheet
                 
+                
+                if self.XLSX_SHEET_NAME in wb.sheetnames:
+                    ws = wb[self.XLSX_SHEET_NAME]
+                else:
+                    print(f"Sheet '{self.XLSX_SHEET_NAME}' not found, loading the first sheet instead.")
+                    ws = wb.worksheets[0]
+                print(f"Available sheets: {wb.sheetnames}")
+                print(f"Selected worksheet: {ws.title}")
+
+                
+                print(f"Available sheets: {wb.sheetnames}")
                 # Check if the sheet exists in the workbook
             
                 
