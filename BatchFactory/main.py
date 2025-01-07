@@ -49,7 +49,7 @@ if __name__ == '__main__':
     # Create the path for the queuefile
     qf = os.path.join(current_path, excel_file)
 
-    # Create an instance of the Ast Factory class, assign the queuefile path and the bcgw username and passwords to the instance
+    # Create an instance of the Batch Factory class, assign the queuefile path and the bcgw username and passwords to the instance
     bat = BATCH_FACTORY(qf, secrets[0], secrets[1], logger, current_path)
 
     if not os.path.exists(qf):
@@ -62,9 +62,9 @@ if __name__ == '__main__':
     
     bat.batch_ast()
     
-    bat.re_load_failed_jobs_V2()
+    # bat.re_load_failed_jobs_V2()
     
-    bat.batch_ast()
+    # bat.batch_ast()
     
     print("Main: BATCH Factory COMPLETE")
     logger.info("Main: BATCH Factory COMPLETE")

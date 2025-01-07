@@ -12,14 +12,14 @@ from aoi_utilities import build_aoi_from_kml
 
 class BATCH_FACTORY:
     ''' Batch factory class reads a spreadsheet to gather parameters and then batch runs any given tool '''
-    XLSX_SHEET_NAME = 'batch_config'
+    XLSX_SHEET_NAME = 'ast_config'
     BATCH_PARAMETERS = {}
     
 
     
     BATCH_CONDITION_COLUMN = 'batch_condition'
     # DONT_OVERWRITE_OUTPUTS = 'dont_overwrite_outputs'
-    AST_SCRIPT = ''
+    BATCH_SCRIPT = ''
     job_index = None  # Initialize job_index as a global variable
     
     def __init__(self, queuefile, db_user, db_pass, logger=None, current_path=None) -> None:
@@ -52,9 +52,18 @@ class BATCH_FACTORY:
         if os.path.exists(self.queuefile):
 
             try:
+                print(f'Queue file exists....Queue file is {self.queuefile}')
                 # Open the Excel workbook and select the correct sheet
+                print("Loading workbook.....")
                 wb = load_workbook(filename=self.queuefile)
+                print(f'Workbook loaded is {wb}')
+                
+                print("Loading worksheet.....")
                 ws = wb[self.XLSX_SHEET_NAME]
+                
+                # Check if the sheet exists in the workbook
+            
+                
                 
                 if ws not in wb.sheetnames:
                     raise ValueError(f"'{self.XLSX_SHEET_NAME}' sheet not found in the workbook.")
@@ -77,20 +86,7 @@ class BATCH_FACTORY:
                 self.logger.info(f"Identified parameter names: {self.parameter_names}")
                 
                 self.jobs = []  # clear existing jobs
-                
 
-                
-                
-                
-        
-                # 
-                # 
-                # 
-                # 
-                # 
-                # 
-                # 
-                # *******
                 # Create the dictionary the holds the keys (header names/parameters) and values (job details) for each job
                 # Read all the data rows (starting from the second row to skip the header)
                 data = []
@@ -188,7 +184,7 @@ class BATCH_FACTORY:
                             
                     # Add the job to the jobs list after all checks and processing
                     self.jobs.append(job)
-                    print(f"Load Jobs - Job Condition for job ({row_idx}) is not Complete: Writing ({batch_condition}) to ast_contion. Adding job: {row_idx} to jobs list")
+                    print(f"Load Jobs - Job Condition for job ({row_idx}) is not Complete: Writing ({batch_condition}) to batch_contion. Adding job: {row_idx} to jobs list")
                     self.logger.info(f"Load Jobs - Job Condition is not Complete ({batch_condition}), adding job: {row_idx} to jobs list")
 
                     # print(f"Load Jobs - Job dictionary is {job}")
@@ -270,26 +266,20 @@ class BATCH_FACTORY:
             # Read the header index for the batch_condition column
             header = next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
             
-            # Check if 'AST CONDITION COLUMN' exists in the header. If it is not found, raise a ValueError
-            # if ast condition column IS found, log a message
+            # Check if 'BATCH CONDITION COLUMN' exists in the header. If it is not found, raise a ValueError
+            # if batch condition column IS found, log a message
             if self.BATCH_CONDITION_COLUMN not in header:
                 raise ValueError(f"'{self.BATCH_CONDITION_COLUMN}' column not found in the spreadsheet.")
             
             if self.BATCH_CONDITION_COLUMN in header:
                 self.logger.info(f"Add Job Result - '{self.BATCH_CONDITION_COLUMN}' column found in the spreadsheet.")
                 
-            # # Check if 'DONT OVERWRITE OUTPUTS' exists in the header
-            # if self.DONT_OVERWRITE_OUTPUTS not in header:
-            #     raise ValueError(f"'{self.DONT_OVERWRITE_OUTPUTS}' column not found in the spreadsheet.")
-            
-            # if self.DONT_OVERWRITE_OUTPUTS in header:
-            #     self.logger.info(f"Add Job Result - '{self.DONT_OVERWRITE_OUTPUTS}' column found in the spreadsheet.")
-            
-            # Find the ast condition column and assign it to the correct index
-            ast_condition_index = header.index(self.BATCH_CONDITION_COLUMN) + 1  # +1 because Excel columns are 1-indexed
 
-            # # Find the dont_overwrite_outputs column and assign it to the correct index
-            dont_overwrite_outputs_index = header.index(self.DONT_OVERWRITE_OUTPUTS) + 1  # +1 because Excel columns are 1-indexed
+            
+            # Find the job condition column and assign it to the correct index
+            batch_condition_index = header.index(self.BATCH_CONDITION_COLUMN) + 1  # +1 because Excel columns are 1-indexed
+
+    
             
             # Calculate the actual row index in Excel, +2 to account for header and 0-index
             excel_row_index = job_index + 2  # NOTE I changed this to +1 and it changes the batch_condition header row to Failed. So it must stay at +2
@@ -306,21 +296,9 @@ class BATCH_FACTORY:
                 return  # Do not update if the row is blank
 
             # Update the ast condition for the specific job to the new condition (failed, queued, complete)
-            ws.cell(row=excel_row_index, column=ast_condition_index, value=condition)
+            ws.cell(row=excel_row_index, column=batch_condition_index, value=condition)
 
-            # if the condition in BATCH_CONDITION_COLUMN is 'Requeued" then go to the dont overwrite output column and change false to true
-            if condition == 'Requeued':
-                # print(f"Add Job Result - Job {job_index} failed, updating condition to 'Requeued'.  **CHANGED JOB INDEX +1 to JOB INDEX ***") #NOTE CHANGED JOB INDEX + 1 to JOB INDEX
-                self.logger.info(f"Add Job Result - Job {job_index} (Row {excel_row_index})  updating condition to 'Requeued'.") 
-                ws.cell(row=excel_row_index, column=dont_overwrite_outputs_index, value="True")
-                self.logger.info(f"Add Job Result - Job {job_index} (Row {excel_row_index})  updating dont_overwrite_outputs to 'True'.")
             
-            # Save the workbook with the updated condition
-            self.logger.info(f"Add Job Result - Updated Job {job_index} with condition '{condition}'.")
-            wb.save(self.queuefile)
-            self.logger.info(f"Add Job Result - Saving Workbook with updated condition")
-            print(f"Updated row {excel_row_index} with condition '{condition}'.")
-
         except FileNotFoundError as e:
             print(f"Error: Queue file not found - {e}")
             self.logger.error(f"Error: Queue file not found - {e}")
@@ -533,7 +511,7 @@ class BATCH_FACTORY:
                         # continue  
                         batch_condition = 'COMPLETE'    
                     
-                    # Change ast condition to requeued if the job is failed
+                    # Change batch condition to requeued if the job is failed
                     elif batch_condition.upper() == 'FAILED':
                         self.logger.info(f"Re Load Failed Jobs: Requeuing {job_index} as it is marked Failed.")
                         batch_condition = 'Requeued'
@@ -546,8 +524,8 @@ class BATCH_FACTORY:
                     # Assign updated condition to the job dictionary
                     job[self.BATCH_CONDITION_COLUMN] = batch_condition
                         
-                    print(f"Re Load Failed Jobs: Job {job_index} is marked as Failed, re-assigning ast condition to {batch_condition}")
-                    self.logger.info(f"Re Load Failed Jobs: Job {job_index}'s ast condition has been updated as '{batch_condition}'")
+                    print(f"Re Load Failed Jobs: Job {job_index} is marked as Failed, re-assigning batch condition to {batch_condition}")
+                    self.logger.info(f"Re Load Failed Jobs: Job {job_index}'s batch condition has been updated as '{batch_condition}'")
 
 
                     # Immediately update the Excel sheet with the new condition
@@ -661,8 +639,8 @@ class BATCH_FACTORY:
         arcpy_errors = arcpy.GetMessages(2) # Gets all errors only
         
         if arcpy_messages:
-            self.logger.info(f'ast_toobox arcpy messages: {arcpy_messages}')
+            self.logger.info(f'batch_toobox arcpy messages: {arcpy_messages}')
         if arcpy_warnings:
-            self.logger.warning(f'ast_toobox arcpy warnings: {arcpy_warnings}')
+            self.logger.warning(f'batch_toobox arcpy warnings: {arcpy_warnings}')
         if arcpy_errors:
-            self.logger.error(f'ast_toobox arcpy errors: {arcpy_errors}')   
+            self.logger.error(f'batch_toobox arcpy errors: {arcpy_errors}')   
