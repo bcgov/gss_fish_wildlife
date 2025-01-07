@@ -13,29 +13,12 @@ from aoi_utilities import build_aoi_from_kml
 class BATCH_FACTORY:
     ''' Batch factory class reads a spreadsheet to gather parameters and then batch runs any given tool '''
     XLSX_SHEET_NAME = 'batch_config'
-    BATCH_PARAMETERS = {
-        0: 'region',
-        1: 'feature_layer',
-        2: 'crown_file_number',
-        3: 'disposition_number',
-        4: 'parcel_number',
-        5: 'output_directory',
-        6: 'output_directory_same_as_input',
-        7: 'dont_overwrite_outputs',
-        8: 'skip_conflicts_and_constraints',
-        9: 'suppress_map_creation',
-        10: 'add_maps_to_current',
-        11: 'run_as_fcbc',
-
-    }
+    BATCH_PARAMETERS = {}
     
-    ADDITIONAL_PARAMETERS = {
-        12: 'batch_condition',
-        13: 'file_number'
-    }
+
     
     BATCH_CONDITION_COLUMN = 'batch_condition'
-    DONT_OVERWRITE_OUTPUTS = 'dont_overwrite_outputs'
+    # DONT_OVERWRITE_OUTPUTS = 'dont_overwrite_outputs'
     AST_SCRIPT = ''
     job_index = None  # Initialize job_index as a global variable
     
@@ -76,13 +59,24 @@ class BATCH_FACTORY:
                 if ws not in wb.sheetnames:
                     raise ValueError(f"'{self.XLSX_SHEET_NAME}' sheet not found in the workbook.")
                 
-                # Get the header (column names) from the first row of the sheet
-                header = list([row for row in ws.iter_rows(min_row=1, max_col=None, values_only=True)][0])
-                
-                if not header:
+                # Get the header row (parameter names)
+                header_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
+                if not header_row or not any(header_row):
                     raise ValueError("No header found in the spreadsheet.")
-                
 
+                # Convert None headers to empty strings if needed
+                header = [h if h is not None else "" for h in header_row]
+                
+                # Store these header names in self.parameter_names so we can reference them later
+                # but exclude any known special columns like self.BATCH_CONDITION_COLUMN:
+                self.parameter_names = []
+                for col_name in header:
+                    if col_name and col_name != self.BATCH_CONDITION_COLUMN:
+                        self.parameter_names.append(col_name)
+                        
+                self.logger.info(f"Identified parameter names: {self.parameter_names}")
+                
+                self.jobs = []  # clear existing jobs
                 
 
                 
@@ -97,47 +91,51 @@ class BATCH_FACTORY:
                 # 
                 # 
                 # *******
+                # Create the dictionary the holds the keys (header names/parameters) and values (job details) for each job
                 # Read all the data rows (starting from the second row to skip the header)
                 data = []
                 
-                for row_idx, row in enumerate(ws.iter_rows(min_row=2, max_col=None, values_only=True), start=2):
+                for row_idx, row_data in enumerate(ws.iter_rows(min_row=2, max_col=None, values_only=True), start=2):
                           # If the row is entirely blank, skip it
-                    if all((value is None or str(value).strip() == '') for value in row):
+                    if all((value is None or str(value).strip() == '') for value in row_data):
                         continue
-                    print(f'Row is {row}')
+                    print(f'Row index is {row_idx} and row is {row_data}')
                     # data.append(row)
                     
                     # Create a dictionary to store the row data
-                    job_dict = {}
-                    for col_idx, value in enumerate(row):
+                    job = {}
+                    for col_idx, cell_value in enumerate(row_data):
                         # Only process cells that match up to existing header columns
                         if col_idx < len(header):
                             param_name = header[col_idx]
-                            job_dict[param_name] = value
+                            if param_name:
+                            # Store the cell_value in the dictionary
+                                job[param_name] = cell_value
+                                print(f'Job dictionary is {job}')
                 
                 
-                # Iterate over each row of data; enumerate to keep track of the row number in Excel
-                for job_index, row_data in enumerate(data):  
+                                                    # # Iterate over each row of data; enumerate to keep track of the row number in Excel
+                                                    # for job_index, row_data in enumerate(data):  
 
-                    # Dictionary where key is index key is Job number dictionary is the dictionary of jobs
-                    # Send job to processer and include status
-                    self.logger.info(f"\n")
-                    self.logger.info(f"-------------------------------------------------------------------------------")
-                    self.logger.info(f"-                        Load Jobs: Start of Job {job_index}                               -")
-                    self.logger.info(f"-------------------------------------------------------------------------------")
-                    self.logger.info(f"\n")
-                    
-                    # Initialize a dictionary to store the job's parameters
-                    job = {}
-                    self.logger.info('Load Jobs - Creating empty dictionary')
-                    batch_condition = None  # Initialize the batch_condition for the current row
-                        
-                    
-                    # Skip any completely blank rows
-                    if all((value is None or str(value).strip() == '') for value in row_data):
-                        print(f"Load Jobs - Skipping blank row at job index ({job_index}) ")
-                        self.logger.info(f"Load Jobs - Skipping blank row at index ({job_index}) ")
-                        continue  # Skip this row entirely
+                                                    #     # Dictionary where key is index key is Job number dictionary is the dictionary of jobs
+                                                    #     # Send job to processer and include status
+                                                    #     self.logger.info(f"\n")
+                                                    #     self.logger.info(f"-------------------------------------------------------------------------------")
+                                                    #     self.logger.info(f"-                        Load Jobs: Start of Job {job_index}                               -")
+                                                    #     self.logger.info(f"-------------------------------------------------------------------------------")
+                                                    #     self.logger.info(f"\n")
+                                                        
+                                                    #     # Initialize a dictionary to store the job's parameters
+                                                    #     job = {}
+                                                    #     self.logger.info('Load Jobs - Creating empty dictionary')
+                                                    #     batch_condition = None  # Initialize the batch_condition for the current row
+                                                            
+                                                        
+                                                    #     # Skip any completely blank rows
+                                                    #     if all((value is None or str(value).strip() == '') for value in row_data):
+                                                    #         print(f"Load Jobs - Skipping blank row at job index ({job_index}) ")
+                                                    #         self.logger.info(f"Load Jobs - Skipping blank row at index ({job_index}) ")
+                                                    #         continue  # Skip this row entirely
 
 
                     # Loop through each column header and corresponding value in the current row
@@ -154,12 +152,13 @@ class BATCH_FACTORY:
                             job[key] = value
 
                     # Skip if marked as "COMPLETE"
+                    batch_condition = job.get(self.BATCH_CONDITION_COLUMN, "")
                     if batch_condition.upper() == 'COMPLETE':
-                        print(f"Skipping job {job_index} as it is marked COMPLETE.")
-                        self.logger.info(f"Load Jobs - Skipping job {job_index} as it is marked COMPLETE.")
+                        print(f"Skipping job {row_idx} as it is marked COMPLETE.")
+                        self.logger.info(f"Load Jobs - Skipping job {row_idx} as it is marked COMPLETE.")
                         # continue  # Skip this job as it's already marked as COMPLETE
 
-                    # Check if the batch_condition is None, empty, or not 'COMPLETE'
+                    # Check if the batch_condition is None, empty, or not 'COMPLETE' assign it to queued
                     if batch_condition is None or batch_condition.strip() == '' or batch_condition.upper() != 'COMPLETE':
                         # Assign 'Queued' to the batch_condition and update the job dictionary
                         batch_condition = 'Queued'
@@ -171,16 +170,16 @@ class BATCH_FACTORY:
                         # Immediately update the Excel sheet with the new condition
                         #LOAD JOBS ADD_JOB_RESULT FUNCTION IS CALLED HERE
                         try:
-                            self.add_job_result(job_index, batch_condition)
-                            self.logger.info(f"Load Jobs - Added job condition '{batch_condition}' for job {job_index} to jobs list")
+                            self.add_job_result(row_idx, batch_condition)
+                            self.logger.info(f"Load Jobs - Added job condition '{batch_condition}' for job {row_idx} to jobs list")
                         except Exception as e:
-                            print(f"Error updating Excel sheet at row {job_index}: {e}")
-                            self.logger.error(f"Load Jobs - Error updating Excel sheet at row {job_index}: {e}")
+                            print(f"Error updating Excel sheet at row {row_idx}: {e}")
+                            self.logger.error(f"Load Jobs - Error updating Excel sheet at row {row_idx}: {e}")
                             continue
 
                         # Classify the input type for the job
                         try:
-                            self.logger.info(f"Classifying input type for job {job_index}")
+                            self.logger.info(f"Classifying input type for job {row_idx}")
                             self.classify_input_type(job)
  
                         except Exception as e:
@@ -189,14 +188,14 @@ class BATCH_FACTORY:
                             
                     # Add the job to the jobs list after all checks and processing
                     self.jobs.append(job)
-                    print(f"Load Jobs - Job Condition for job ({job_index}) is not Complete: Writing ({batch_condition}) to ast_contion. Adding job: {job_index} to jobs list")
-                    self.logger.info(f"Load Jobs - Job Condition is not Complete ({batch_condition}), adding job: {job_index} to jobs list")
+                    print(f"Load Jobs - Job Condition for job ({row_idx}) is not Complete: Writing ({batch_condition}) to ast_contion. Adding job: {row_idx} to jobs list")
+                    self.logger.info(f"Load Jobs - Job Condition is not Complete ({batch_condition}), adding job: {row_idx} to jobs list")
 
                     # print(f"Load Jobs - Job dictionary is {job}")
                     # self.logger.info(f"Load Jobs - Job {job_index} dictionary is {job}")
                     self.logger.info(f"\n")
                     self.logger.info(f"-------------------------------------------------------------------------------")
-                    self.logger.info(f"-                        End of Job {job_index}                                -")
+                    self.logger.info(f"-                        End of Job {row_idx}                                -")
                     self.logger.info(f"-------------------------------------------------------------------------------")
                     self.logger.info(f"\n")
                     

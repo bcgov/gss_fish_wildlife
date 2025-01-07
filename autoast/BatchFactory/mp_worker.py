@@ -6,7 +6,7 @@ import sys
 
 
 
-def process_job_mp(ast_instance, job, job_index, current_path, return_dict):
+def process_job_mp(batch_factory_instance, job, job_index, current_path, return_dict):
     import os
     import arcpy
     import datetime
@@ -45,22 +45,41 @@ def process_job_mp(ast_instance, job, job_index, current_path, return_dict):
         level=logging.DEBUG,  # Set level to DEBUG to capture all messages
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
-
+    
+    # Set up the parameters for the job from the list
+    params = []
+    for param_name in batch_factory_instance.parameter_names:
+        value = job.get(param_name)
+        
+    logger.info(f"Parameters for job {job_index}: {params}")
+    print(f"Parameters for job {job_index}: {params}")
+    
+    
     try:
         # Re-import the toolbox in each process
-        ast_toolbox = os.getenv('TOOLBOX')  # Get the toolbox path from environment variables
-        if ast_toolbox:
-            arcpy.ImportToolbox(ast_toolbox)
-            print(f"Process Job Mp: AST Toolbox imported successfully in worker.")
-            logger.info(f"Process Job Mp: AST Toolbox imported successfully in worker.")
+        any_toolbox = os.getenv('TOOLBOX')  # Get the toolbox path from environment variables
+        
+        if any_toolbox:
+            arcpy.ImportToolbox(any_toolbox)
+            print(f"Process Job Mp: {any_toolbox} imported successfully in worker.")
+            logger.info(f"Process Job Mp: {any_toolbox} imported successfully in worker.")
         else:
-            raise ImportError("Process Job Mp: AST Toolbox path not found. Ensure TOOLBOX path is set correctly in environment variables.")
+            raise ImportError("Process Job Mp: Toolbox path not found. Ensure TOOLBOX path is set correctly in environment variables.")
 
+        any_tool = os.getenv('TOOL') # Get the tool name from environment variables
+        if not any_tool:
+            raise ImportError("Tool name not found in .env")
+
+        tool_func = getattr(arcpy, any_tool, None)
+        if not tool_func:
+            raise AttributeError(f"Tool '{any_tool}' not found in the toolbox.")
+    
+        
         # Prepare parameters
         params = []
 
         # Convert 'true'/'false' strings to booleans
-        for param in ast_instance.AST_PARAMETERS.values(): # use the ast_instance that is passed into the function to access the ast factory parameters
+        for param in batch_factory_instance.BATCH_PARAMETERS.values(): # use the batch_factory_instance that is passed into the function to access the ast factory parameters
             value = job.get(param)
             if isinstance(value, str) and value.lower() in ['true', 'false']:
                 value = True if value.lower() == 'true' else False
@@ -107,18 +126,17 @@ def process_job_mp(ast_instance, job, job_index, current_path, return_dict):
                 raise RuntimeError(f"Failed to create the output directory '{output_directory}'. Check your permissions: {e}")
 
 
-        # Ensure that region has been entered otherwise job will fail
-        if not job.get('region'):
-            raise ValueError("Process Job Mp: Region is required and was not provided. Job Failed")
+    
 
         # Log the parameters being used
         logger.debug(f"Process Job Mp: Job Parameters: {params}")
 
-        # Run the ast tool
-        logger.info("Process Job Mp: Running MakeAutomatedStatusSpreadsheet_ast...")
-        arcpy.MakeAutomatedStatusSpreadsheet_ast(*params)
-        logger.info("Process Job Mp: MakeAutomatedStatusSpreadsheet_ast completed successfully.")
-        ast_instance.add_job_result(job_index, 'COMPLETE')
+        # Run the tool
+        logger.info("Process Job Mp: Running your tool in Multiprocessing Batch Mode...Hold on!!!! ...")
+        logger.info(f"Running tool {any_tool} with params={params}")
+        arcpy.tool_func(*params)
+        logger.info("Process Job Mp: Your Tool completed successfully.")
+        batch_factory_instance.add_job_result(job_index, 'COMPLETE')
 
         # Capture and log arcpy messages
         logger.info("Process Job Mp: Capturing arcpy messages...")
