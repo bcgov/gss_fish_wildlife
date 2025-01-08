@@ -84,10 +84,8 @@ from openpyxl.styles import Alignment, Font, PatternFill #,Border
 from openpyxl.styles.borders import Border, Side
 
 # import both the statusing tools which create tabs 1, 2, 3
-sys.path.append(r'\\GISWHSE.ENV.GOV.BC.CA\WHSE_NP\corp\script_whse\python\Utility_Misc\Ready\statusing_tools_arcpro\alpha')
-# sys.path.append(r'\\spatialfiles.bcgov\work\srm\nel\Local\Geomatics\Workarea\csostad\GitHubAutoAST\statusing_tools_arcpro\beta')
+sys.path.append(r'\\spatialfiles.bcgov\work\srm\nel\Local\Geomatics\Workarea\csostad\GitHubAutoAST\gss_authorizations\autoast')
 # sys.path.append(r'\\GISWHSE.ENV.GOV.BC.CA\WHSE_NP\corp\script_whse\python\Utility_Misc\Ready\statusing_tools_arcpro\Scripts')
-# sys.path.append(r'\\spatialfiles.bcgov\work\srm\nel\Local\Geomatics\Workarea\csostad\GitHubAutoAST\statusing_tools_arcpro\Ready')
 import universal_overlap_tool_arcpro as revolt #@UnresolvedImport
 import one_status_tabs_one_and_two_arcpro as one_status_part2
 import create_bcgw_sde_connection as connect_bcgw
@@ -160,6 +158,43 @@ def main():
     # ___________
     debug_version = arcpy.GetParameterAsText(12)
 
+    '''
+    Sets up the geodatabase name, and deletes that
+    geodatabase if the dont_overwrite_outputs != True
+    '''
+    arcpy.AddMessage("======================================================================")
+    arcpy.AddMessage("   Checking existence of GDB")
+    #specify output folder and gdb to store the input spatial depending
+    #on parameters set by user in tool parameters.
+    gdb_name = "aoi_boundary.gdb"
+    try:
+        if output_directory != "#" and output_directory != "":
+            directory_to_store_output = output_directory
+            data_gdb = os.path.join(directory_to_store_output, gdb_name)
+            arcpy.AddMessage("Full_Path: " + data_gdb)
+        else:
+            desc = arcpy.Describe(feature_layer)
+            path = desc.catalogPath
+            arcpy.AddMessage("Feature Layer Input: " + path)
+            directory_to_store_output = revolt.get_fc_directory_name(path)
+            data_gdb = os.path.join(directory_to_store_output, gdb_name)
+            arcpy.AddMessage("Full_Path: " + data_gdb)
+    except Exception as e:
+        arcpy.AddWarning(e)
+        sys.exit()
+    
+    if arcpy.Exists(data_gdb):
+        arcpy.AddMessage("found: " + data_gdb)
+        if dont_overwrite_outputs == "false" or dont_overwrite_outputs == "#": #delete gdb if exists and overwrite <> true
+            arcpy.AddMessage("deleting " + data_gdb)
+            arcpy.Delete_management(data_gdb)
+            arcpy.CreateFileGDB_management(directory_to_store_output, gdb_name)
+        elif dont_overwrite_outputs == "true":
+            arcpy.AddWarning("GDB exists and dont_overwrite_outputs is set to true")
+    else:
+        arcpy.AddMessage("creating " + data_gdb)
+        arcpy.CreateFileGDB_management(directory_to_store_output, gdb_name)
+
 
     arcpy.AddMessage("======================================================================")
     arcpy.AddMessage("Checking BCGW Credentials - may take a minute to process...")
@@ -167,7 +202,7 @@ def main():
     #set the key name that will be used for storing credentials in keyring
     key_name = config.CONNNAME
     try:
-        oracleCreds = connect_bcgw.ManageCredentials(key_name, output_directory)
+        oracleCreds = connect_bcgw.ManageCredentials(key_name, directory_to_store_output)
         #get sde path location
         if not oracleCreds.check_credentials():
             arcpy.AddError("BCGW credentials could not be established.")
@@ -233,50 +268,12 @@ def main():
     arcpy.AddMessage("======================================================================")
     arcpy.AddMessage("Setting hard-coded variables")
     spatial_reference = arcpy.SpatialReference(3005)
-    if region == 'Cariboo Debug':
+    if region == 'debug_do_not_use':
         xls_file_for_analysis_input = r"\\giswhse.env.gov.bc.ca\whse_np\corp\script_whse\python\Utility_Misc\Ready\statusing_tools_arcpro\statusing_input_spreadsheets\one_status_common_datasets_debug_version.xlsx"
         xls_file_for_analysis_input2 = r"\\giswhse.env.gov.bc.ca\whse_np\corp\script_whse\python\Utility_Misc\Ready\statusing_tools_arcpro\statusing_input_spreadsheets\one_status_cariboo_specific_debug_version.xlsx"
     else:
         xls_file_for_analysis_input = r"\\giswhse.env.gov.bc.ca\whse_np\corp\script_whse\python\Utility_Misc\Ready\statusing_tools_arcpro\statusing_input_spreadsheets\one_status_common_datasets.xlsx"
         xls_file_for_analysis_input2 = r"\\giswhse.env.gov.bc.ca\whse_np\corp\script_whse\python\Utility_Misc\Ready\statusing_tools_arcpro\statusing_input_spreadsheets\one_status_" + region + "_specific.xlsx"
-    
- 
-    '''
-    Sets up the geodatabase name, and deletes that
-    geodatabase if the dont_overwrite_outputs != True
-    '''
-    arcpy.AddMessage("======================================================================")
-    arcpy.AddMessage("   Checking existence of GDB")
-    #specify output folder and gdb to store the input spatial depending
-    #on parameters set by user in tool parameters.
-    gdb_name = "aoi_boundary.gdb"
-    try:
-        if output_directory != "#" and output_directory != "":
-            directory_to_store_output = output_directory
-            data_gdb = os.path.join(directory_to_store_output, gdb_name)
-            arcpy.AddMessage("Full_Path: " + data_gdb)
-        else:
-            desc = arcpy.Describe(feature_layer)
-            path = desc.catalogPath
-            arcpy.AddMessage("Feature Layer Input: " + path)
-            directory_to_store_output = revolt.get_fc_directory_name(path)
-            data_gdb = os.path.join(directory_to_store_output, gdb_name)
-            arcpy.AddMessage("Full_Path: " + data_gdb)
-    except Exception as e:
-        arcpy.AddWarning(e)
-        sys.exit()
-    
-    if arcpy.Exists(data_gdb):
-        arcpy.AddMessage("found: " + data_gdb)
-        if dont_overwrite_outputs == "false" or dont_overwrite_outputs == "#": #delete gdb if exists and overwrite <> true
-            arcpy.AddMessage("deleting " + data_gdb)
-            arcpy.Delete_management(data_gdb)
-            arcpy.CreateFileGDB_management(directory_to_store_output, gdb_name)
-        elif dont_overwrite_outputs == "true":
-            arcpy.AddWarning("GDB exists and dont_overwrite_outputs is set to true")
-    else:
-        arcpy.AddMessage("creating " + data_gdb)
-        arcpy.CreateFileGDB_management(directory_to_store_output, gdb_name)
 
 
     '''
@@ -669,5 +666,5 @@ def copySheet_toNewWB(src_ws, ws_name, dst_wb, dst_wb_path):
     dst_wb.save(dst_wb_path)      
 
 #___________________________________________________________________________
-if __name__=='__main__':
-    main()
+
+main()
