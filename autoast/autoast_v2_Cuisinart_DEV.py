@@ -86,6 +86,8 @@ def setup_logging():
 def import_ast(logger):
     # Get the toolbox path from environment variables
     ast_toolbox = os.getenv('TOOLBOX') # File path 
+    #NOTE transfer this to modular version
+    ast_tool_alias = os.getenv("TOOLBOXALIAS") # Alias name
 
     if ast_toolbox is None:
         print("Unable to find the toolbox. Check the path in .env file")
@@ -94,8 +96,10 @@ def import_ast(logger):
 
     # Import the toolbox
     try:
-        arcpy.ImportToolbox(ast_toolbox)
-        print(f"AST Toolbox imported successfully.")
+        # print(arcpy.ListTools("*"))
+        arcpy.ImportToolbox(ast_toolbox, ast_tool_alias)
+ 
+ 
         logger.info(f"AST Toolbox imported successfully.")
     except Exception as e:
         print(f"Error importing toolbox: {e}")
@@ -979,8 +983,9 @@ def process_job_mp(ast_instance, job, job_index, current_path, return_dict):
     try:
         # Re-import the toolbox in each process
         ast_toolbox = os.getenv('TOOLBOX')  # Get the toolbox path from environment variables
+        ast_toolbox_alias = os.getenv('TOOLBOXALIAS')  # Get the toolbox alias from environment variables
         if ast_toolbox:
-            arcpy.ImportToolbox(ast_toolbox)
+            arcpy.ImportToolbox(ast_toolbox, ast_toolbox_alias)
             print(f"Process Job Mp: AST Toolbox imported successfully in worker.")
             logger.info(f"Process Job Mp: AST Toolbox imported successfully in worker.")
         else:
@@ -1046,7 +1051,7 @@ def process_job_mp(ast_instance, job, job_index, current_path, return_dict):
 
         # Run the ast tool
         logger.info("Process Job Mp: Running MakeAutomatedStatusSpreadsheet_ast...")
-        arcpy.MakeAutomatedStatusSpreadsheet_ast(*params)
+        arcpy.alphaast.MakeAutomatedStatusSpreadsheet(*params)
         logger.info("Process Job Mp: MakeAutomatedStatusSpreadsheet_ast completed successfully.")
         ast_instance.add_job_result(job_index, 'COMPLETE')
 
