@@ -49,8 +49,10 @@ def process_job_mp(ast_instance, job, job_index, current_path, return_dict):
     try:
         # Re-import the toolbox in each process
         ast_toolbox = os.getenv('TOOLBOX')  # Get the toolbox path from environment variables
+        ast_toolbox_alias = os.getenv('TOOLBOXALIAS')  # Get the toolbox alias from environment variables
+        
         if ast_toolbox:
-            arcpy.ImportToolbox(ast_toolbox)
+            arcpy.ImportToolbox(ast_toolbox, ast_toolbox_alias)
             print(f"Process Job Mp: AST Toolbox imported successfully in worker.")
             logger.info(f"Process Job Mp: AST Toolbox imported successfully in worker.")
         else:
