@@ -6,6 +6,8 @@ import arcpy
 def import_ast(logger):
     # Get the toolbox path from environment variables
     ast_toolbox = os.getenv('TOOLBOX') # File path 
+    #NOTE transfer this to modular version
+    ast_tool_alias = os.getenv("TOOLBOXALIAS") # Alias name
 
     if ast_toolbox is None:
         print("Unable to find the toolbox. Check the path in .env file")
@@ -14,8 +16,10 @@ def import_ast(logger):
 
     # Import the toolbox
     try:
-        arcpy.ImportToolbox(ast_toolbox)
-        print(f"AST Toolbox imported successfully.")
+        # print(arcpy.ListTools("*"))
+        arcpy.ImportToolbox(ast_toolbox, ast_tool_alias)
+ 
+ 
         logger.info(f"AST Toolbox imported successfully.")
     except Exception as e:
         print(f"Error importing toolbox: {e}")

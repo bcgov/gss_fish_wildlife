@@ -13,7 +13,6 @@ def process_job_mp(ast_instance, job, job_index, current_path, return_dict):
     import logging
     import multiprocessing as mp
     import traceback
-   
 
     logger = logging.getLogger(f"Process Job Mp: worker_{job_index}")
 
@@ -49,8 +48,9 @@ def process_job_mp(ast_instance, job, job_index, current_path, return_dict):
     try:
         # Re-import the toolbox in each process
         ast_toolbox = os.getenv('TOOLBOX')  # Get the toolbox path from environment variables
+        ast_toolbox_alias = os.getenv('TOOLBOXALIAS')  # Get the toolbox alias from environment variables
         if ast_toolbox:
-            arcpy.ImportToolbox(ast_toolbox)
+            arcpy.ImportToolbox(ast_toolbox, ast_toolbox_alias)
             print(f"Process Job Mp: AST Toolbox imported successfully in worker.")
             logger.info(f"Process Job Mp: AST Toolbox imported successfully in worker.")
         else:
@@ -60,7 +60,7 @@ def process_job_mp(ast_instance, job, job_index, current_path, return_dict):
         params = []
 
         # Convert 'true'/'false' strings to booleans
-        for param in ast_instance.AST_PARAMETERS.values(): # use the ast_instance that is passed into the function to access the ast factory parameters
+        for param in ast_instance.AST_PARAMETERS.values():
             value = job.get(param)
             if isinstance(value, str) and value.lower() in ['true', 'false']:
                 value = True if value.lower() == 'true' else False
@@ -116,7 +116,7 @@ def process_job_mp(ast_instance, job, job_index, current_path, return_dict):
 
         # Run the ast tool
         logger.info("Process Job Mp: Running MakeAutomatedStatusSpreadsheet_ast...")
-        arcpy.MakeAutomatedStatusSpreadsheet_ast(*params)
+        arcpy.alphaast.MakeAutomatedStatusSpreadsheet(*params)
         logger.info("Process Job Mp: MakeAutomatedStatusSpreadsheet_ast completed successfully.")
         ast_instance.add_job_result(job_index, 'COMPLETE')
 
