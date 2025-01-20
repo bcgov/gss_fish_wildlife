@@ -1,0 +1,38 @@
+Generating Maps for Cumulative Effects - Grizzly Bear
+..creating Map 1 of 3: Grizzly_Bear_Percent_Core_Security_Areas
+..creating Map 2 of 3: Grizzly_Bear_Road_Density
+..creating Map 3 of 3: Grizzly_Bear_Conservation_Concern_Rank
+
+Generating Maps for Cumulative Effects - RSEA
+..creating Map 1 of 5: Risk_to_Peaceful_Enjoyment
+..creating Map 2 of 5: Environmental_Livelihoods_Grid
+Traceback (most recent call last):
+  File "P:\corp\python_ast\lib\site-packages\pandas\core\indexes\base.py", line 3652, in get_loc
+    return self._engine.get_loc(casted_key)
+  File "pandas\_libs\index.pyx", line 147, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas\_libs\index.pyx", line 176, in pandas._libs.index.IndexEngine.get_loc
+  File "pandas\_libs\hashtable_class_helper.pxi", line 7080, in pandas._libs.hashtable.PyObjectHashTable.get_item
+  File "pandas\_libs\hashtable_class_helper.pxi", line 7088, in pandas._libs.hashtable.PyObjectHashTable.get_item
+KeyError: 'Rec_grids'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "\\spatialfiles.bcgov\work\srm\nel\Local\Geomatics\Workarea\csostad\GitHubAutoAST\gss_authorizations\autoast\alpha_ast.atbx\MakeAutomatedStatusSpreadsheet.tool\tool.script.execute.py", line 670, in <module>
+  File "\\spatialfiles.bcgov\work\srm\nel\Local\Geomatics\Workarea\csostad\GitHubAutoAST\gss_authorizations\autoast\alpha_ast.atbx\MakeAutomatedStatusSpreadsheet.tool\tool.script.execute.py", line 481, in main
+  File "\\GISWHSE.ENV.GOV.BC.CA\WHSE_NP\corp\script_whse\python\Utility_Misc\Ready\statusing_tools_arcpro\alpha\universal_overlap_tool_arcpro.py", line 99, in run_revolt_tool
+    self.make_html_maps()
+  File "\\GISWHSE.ENV.GOV.BC.CA\WHSE_NP\corp\script_whse\python\Utility_Misc\Ready\statusing_tools_arcpro\alpha\universal_overlap_tool_arcpro.py", line 1399, in make_html_maps
+    html.generate_html_maps()
+  File "\\GISWHSE.ENV.GOV.BC.CA\WHSE_NP\corp\script_whse\python\Utility_Misc\Ready\statusing_tools_arcpro\alpha\fc_to_html.py", line 239, in generate_html_maps
+    gdf_fc[col] = gdf_fc[col].astype(str)
+  File "P:\corp\python_ast\lib\site-packages\geopandas\geodataframe.py", line 1474, in __getitem__
+    result = super().__getitem__(key)
+  File "P:\corp\python_ast\lib\site-packages\pandas\core\frame.py", line 3761, in __getitem__
+    indexer = self.columns.get_loc(key)
+  File "P:\corp\python_ast\lib\site-packages\pandas\core\indexes\base.py", line 3654, in get_loc
+    raise KeyError(key) from err
+KeyError: 'Rec_grids'
+Running Add Job Results...
+Updated row 2 with condition 'Failed'.
+Batch Ast: Job 0 failed due to an exception.
