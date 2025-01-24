@@ -84,17 +84,10 @@ from openpyxl.styles import Alignment, Font, PatternFill #,Border
 from openpyxl.styles.borders import Border, Side
 
 # import both the statusing tools which create tabs 1, 2, 3
-<<<<<<< HEAD
-# sys.path.append(r'\GISWHSE.ENV.GOV.BC.CA\whse_np\corp\script_whse\python\Utility_Misc\Ready\statusing_tools_arcpro\alpha')
-# sys.path.append(r'\\spatialfiles.bcgov\work\srm\nel\Local\Geomatics\Workarea\csostad\GitHubAutoAST\statusing_tools_arcpro\beta')
-# sys.path.append(r'\\GISWHSE.ENV.GOV.BC.CA\WHSE_NP\corp\script_whse\python\Utility_Misc\Ready\statusing_tools_arcpro\Scripts')
-sys.path.append(r'\\spatialfiles.bcgov\work\srm\nel\Local\Geomatics\Workarea\csostad\GitHubAutoAST\statusing_tools_arcpro\Ready')
-=======
 # sys.path.append(r'\\spatialfiles.bcgov\work\srm\nel\Local\Geomatics\Workarea\csostad\GitHubAutoAST\gss_authorizations\autoast')
 # sys.path.append(r'\\GISWHSE.ENV.GOV.BC.CA\WHSE_NP\corp\script_whse\python\Utility_Misc\Ready\statusing_tools_arcpro\Scripts')
 sys.path.append(r'P:\corp\script_whse\python\Utility_Misc\Ready\statusing_tools_arcpro\alpha')
 
->>>>>>> ast_Alpha_modularization_v2
 import universal_overlap_tool_arcpro as revolt #@UnresolvedImport
 import one_status_tabs_one_and_two_arcpro as one_status_part2
 import create_bcgw_sde_connection as connect_bcgw

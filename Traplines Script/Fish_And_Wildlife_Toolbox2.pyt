@@ -117,7 +117,7 @@ class TraplineBoundaries(object):
         
         
         # Assign your parameters to variables
-        file_num = parameters[0].valueAsText  # Take the first parameter **0 indexed!!** and assign in the the variable file_num
+        # file_num = parameters[0].valueAsText  # Take the first parameter **0 indexed!!** and assign in the the variable file_num
         #set the parameter 'file_num' - User will be required to input the trapline boundary #
         # file_num = arcpy.GetParameterAsText(0) Evans old version
         # proponent_name = parameters[1].valueAsText
@@ -131,7 +131,7 @@ class TraplineBoundaries(object):
         
                 
         '''
-        Trapline_Script.py 
+        Trapline_AutoZoom_Master_toolbox_EB_Oct_21.py 
         Description: 
         This script creates a trapline boundary feature layer and KML by way of user input as "file_num', along with any associated Crown Land File(s) with 
         Trapline Cabin features  WHSE_TANTALIS.TA_CROWN_TENURES_SVW Definition Query = TENURE_SUBPURPOSE = 'TRAPLINE CABIN'
@@ -140,8 +140,6 @@ class TraplineBoundaries(object):
         Author:  Ozra (Sunny) Rahimi, Evan Breton
                 Ministry of Forests, Lands, Natural Resource Operations
                 and Rural Development
-                
-        Edited by: Chris Sostad Dec 16th 2024
             
         Usage Note:  This script will only work with Temp_Trapline_Master template found here:
         \\spatialfiles.bcgov\Work\srm\nel\Local\Geomatics\Workarea\SharedWork\Trapline_Territories\aprx\Temp_Trapline_Master.aprx
@@ -149,7 +147,8 @@ class TraplineBoundaries(object):
         Version 1.0
         '''
 
-
+        import arcpy
+        import os
 
         # addded .shp to trapline boundaries export
         # moved the assignment of layout and maps to objects to the top of the script
@@ -161,20 +160,9 @@ class TraplineBoundaries(object):
         arcpy.env.overwriteOutput = False
 
         # Define paths for the directories 
-        # arcpy.env.workspace = r'\\spatialfiles.bcgov\work\srm\nel\Local\Geomatics\Workarea\SharedWork\Trapline_Territories'
-        # workspace = r'\\spatialfiles.bcgov\work\srm\nel\Local\Geomatics\Workarea\SharedWork\Trapline_Territories'
+        arcpy.env.workspace = r'\\spatialfiles.bcgov\work\srm\nel\Local\Geomatics\Workarea\SharedWork\Trapline_Territories'
+        workspace = r'\\spatialfiles.bcgov\work\srm\nel\Local\Geomatics\Workarea\SharedWork\Trapline_Territories'
 
-        # Get the hidden file path from the .env file
-        workspace = os.getenv('WORKSPACE_PATH') # File path 
-
-        # Set the workspace to the path
-        arcpy.env.workspace = workspace
-
-        
-        file_dir = os.path.join(workspace, year, file_num)
-        
-        arcpy.AddMessage(f"Your Traplines directory is : {file_dir}")
-        
         kml_dir = os.path.join(workspace, 'Kml')
         aprx_dir = os.path.join(workspace, 'Aprx')
         data_dir = os.path.join(workspace, 'Data')
@@ -191,29 +179,35 @@ class TraplineBoundaries(object):
         all_trapline_boundaries_obj = map_obj.listLayers("All Trapline Boundaries")[0]
 
 
-        # # Function to create a directory if it doesn't exist
-        # def create_directory(directory):
-        #     if not os.path.exists(directory):
-        #         os.makedirs(directory)
-        #         arcpy.AddMessage(f"Directory created: {directory}")
-        #     else:
-        #         arcpy.AddMessage(f"Directory already exists: {directory}")
+        # Function to create a directory if it doesn't exist
+        def create_directory(directory):
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+                arcpy.AddMessage(f"Directory created: {directory}")
+            else:
+                arcpy.AddMessage(f"Directory already exists: {directory}")
 
         # Create the main directories
-        create_directory(aprx_dir) # This is where the aprx and .shp files will be stored
-        create_directory(file_dir) # This is where the pdf and .kml
-        # create_directory(data_dir)
-        # create_directory(pdf_dir)
+        create_directory(aprx_dir)
+        create_directory(data_dir)
+        create_directory(pdf_dir)
 
-   
+        #NOTE - change to user input
+
+        # Define the feature name (extracted from the query)
+        #file_num = 'TR0440T001'
+
+        #set the parameter 'file_num' - User will be required to input the trapline boundary #
+        file_num = arcpy.GetParameterAsText(0)
+
 
         # Create subdirectories named after the feature in each main directory
-        # aprx_subdir = os.path.join(aprx_dir, file_num)
-        # data_subdir = os.path.join(data_dir, file_num)
-        # pdf_subdir = os.path.join(pdf_dir, file_num)
+        aprx_subdir = os.path.join(aprx_dir, file_num)
+        data_subdir = os.path.join(data_dir, file_num)
+        pdf_subdir = os.path.join(pdf_dir, file_num)
 
-        # create_directory(aprx_subdir)
-        # create_directory(data_subdir)
+        create_directory(aprx_subdir)
+        create_directory(data_subdir)
         #create_directory(pdf_subdir)
 
 
@@ -242,7 +236,7 @@ class TraplineBoundaries(object):
         with arcpy.da.SearchCursor(all_trapline_boundaries_obj, "*") as cursor:
             for row in cursor:
                 count += 1
-                del cursor
+        del cursor
         # Check if the count is 0 and display a message if the definition query was successful or not.
         if count == 0:
             
@@ -250,8 +244,7 @@ class TraplineBoundaries(object):
         else:
             arcpy.AddMessage(f"         Definition query {expression} set for layer: {all_trapline_boundaries_obj}. Records returned: {count}")
 
-        # NOTE This could be a temp file rather than saving a shapefile
-        
+
         # Specify the trapline boundary layer you want to export features from
         application_trapline_boundary_path = os.path.join(data_dir, 'Scripting Data', 'Trapline_Boundaries_Export.shp')
         arcpy.AddMessage(f"Trapline boundary path: {application_trapline_boundary_path}")
@@ -454,15 +447,13 @@ class TraplineBoundaries(object):
         arcpy.AddMessage("Trapline Boundary Map Automation has been completed")
         arcpy.AddMessage("----------------------------------------------------")
         arcpy.AddMessage("----------------------------------------------------")
-        
-        
-        
+    
         return
-
+    
     def postExecute(self, parameters):
         """This method takes place after outputs are processed and
         added to the display."""
-        return
+                
     
 #NOTE add another tool to the toolbox if you want
 class MySecondTool(object):

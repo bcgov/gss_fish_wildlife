@@ -122,7 +122,10 @@ celerybeat.pid
 *.sage.py
 
 # Environments
+<<<<<<< HEAD
 
+=======
+>>>>>>> ast_Alpha_modularization_v2
 .venv
 env/
 venv/

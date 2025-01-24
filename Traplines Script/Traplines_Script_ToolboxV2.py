@@ -79,9 +79,9 @@ feature_name = arcpy.GetParameterAsText(0)
 
 
 # Create subdirectories named after the feature in each main directory
-aprx_subdir = os.path.join(aprx_dir, feature_name)
-data_subdir = os.path.join(data_dir, feature_name)
-pdf_subdir = os.path.join(pdf_dir, feature_name)
+aprx_subdir = os.path.join(aprx_dir, str(feature_name))
+data_subdir = os.path.join(data_dir, str(feature_name))
+pdf_subdir = os.path.join(pdf_dir, str(feature_name))
 
 create_directory(aprx_subdir)
 create_directory(data_subdir)
