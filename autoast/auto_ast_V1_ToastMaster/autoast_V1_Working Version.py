@@ -26,7 +26,7 @@ import logging
 
 
 ## *** INPUT YOUR EXCEL FILE NAME HERE ***
-excel_file = 'Cariboo_replacement_jobs.xlsx'
+excel_file = 'Cariboo_replacement_1_job.xlsx'
 
 # Define the job timeout in seconds (6 hours) *** Timeout currently not working in this version *** No need to change the time
 JOB_TIMEOUT = 6 * 60 * 60

@@ -5,44 +5,9 @@ import arcpy
 import logging
 import traceback
 import multiprocessing as mp
-<<<<<<< HEAD:autoast/autoast_v2_Cuisinart_DEV.py
-from tqdm import tqdm
-import sys
-import time
-
-
-
-## *** INPUT YOUR EXCEL FILE NAME HERE ***
-excel_file = 'Cariboo_replacement_1_job.xlsx'
-
-# Set the job timeout further down. Use CNTL + F to search for JOB_TIMEOUT
-
-# Number of CPUS to use for multiprocessing ** Currently not used
-NUM_CPUS = mp.cpu_count()
-###############################################################################################################################################################################
-# Set up logging
-
-def setup_logging():
-    ''' Set up logging for the script '''
-    # Create the log folder filename
-    log_folder = f'autoast_logs_{datetime.datetime.now().strftime("%Y%m%d")}'
-
-    # Create the log folder in the current directory if it doesn't exits
-    if not os.path.exists(log_folder):
-        os.mkdir(log_folder)
-    
-    # Check if the log folder was created successfully
-    assert os.path.exists(log_folder), "Error creating log folder, check permissions and path"
-
-    # Create the log file path with the date and time appended
-    log_file = os.path.join(log_folder, f'ast_log_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
-
-
-=======
 from mp_worker import process_job_mp
 from aoi_utilities import build_aoi_from_shp
 from aoi_utilities import build_aoi_from_kml
->>>>>>> ast_Alpha_modularization_v2:autoast/auto_ast_V2_Cuisinart/ast_factory.py
 
 
 class AST_FACTORY:

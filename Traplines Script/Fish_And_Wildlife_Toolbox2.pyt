@@ -18,7 +18,7 @@
 import arcpy
 import os
 import datetime
-from dotenv import load_dotenv
+
 
 # Set up the datetime module to be used in naming folders
 now = datetime.datetime.now()
@@ -112,14 +112,16 @@ class TraplineBoundaries(object):
     
     #NOTE This is where you cut a past your code
     def execute(self, parameters, messages):
-        
+        import arcpy
+        import os
+        import datetime
         """The source code of the tool."""
         
         
         # Assign your parameters to variables
         # file_num = parameters[0].valueAsText  # Take the first parameter **0 indexed!!** and assign in the the variable file_num
         #set the parameter 'file_num' - User will be required to input the trapline boundary #
-        # file_num = arcpy.GetParameterAsText(0) Evans old version
+        file_num = parameters[0].valueAsText
         # proponent_name = parameters[1].valueAsText
         # cp_ID = parameters[2].valueAsText
         # esf_id = parameters[3].valueAsText
@@ -128,7 +130,7 @@ class TraplineBoundaries(object):
         # rp_sections = parameters[6].valueAsText
         # sup_ID = parameters[7].valueAsText
 
-        
+        arcpy.AddMessage(f"File Number: {file_num}")
                 
         '''
         Trapline_AutoZoom_Master_toolbox_EB_Oct_21.py 
@@ -157,7 +159,7 @@ class TraplineBoundaries(object):
         # Create or get the feature_layer object from ArcGIS Pro's content pane or the appropriate source
         aprx = arcpy.mp.ArcGISProject("CURRENT")
 
-        arcpy.env.overwriteOutput = False
+        arcpy.env.overwriteOutput = True
 
         # Define paths for the directories 
         arcpy.env.workspace = r'\\spatialfiles.bcgov\work\srm\nel\Local\Geomatics\Workarea\SharedWork\Trapline_Territories'
@@ -172,7 +174,9 @@ class TraplineBoundaries(object):
         # than having to search through the script to find where it was assigned.
 
         #NOTE: 
-
+        all_trapline_boundaries_str = "Trapline Boundaries"
+        
+        
         map_obj = aprx.listMaps('Map')[0]
         layout = aprx.listLayouts("Layout")[0] 
         all_trapline_cabins_obj = map_obj.listLayers("All Trapline Cabins")[0]
@@ -198,17 +202,20 @@ class TraplineBoundaries(object):
         #file_num = 'TR0440T001'
 
         #set the parameter 'file_num' - User will be required to input the trapline boundary #
-        file_num = arcpy.GetParameterAsText(0)
+        # file_num = arcpy.GetParameterAsText(0)
+        arcpy.AddMessage(f"File Number: {file_num}")
 
 
         # Create subdirectories named after the feature in each main directory
         aprx_subdir = os.path.join(aprx_dir, file_num)
         data_subdir = os.path.join(data_dir, file_num)
+        arcpy.AddMessage(f"Data Subdir: {data_subdir}")
         pdf_subdir = os.path.join(pdf_dir, file_num)
 
         create_directory(aprx_subdir)
         create_directory(data_subdir)
-        #create_directory(pdf_subdir)
+        arcpy.AddMessage(f"Created Data Subdir: {data_subdir}")
+        create_directory(pdf_subdir)
 
 
         # Set up workspace and environment
@@ -236,7 +243,9 @@ class TraplineBoundaries(object):
         with arcpy.da.SearchCursor(all_trapline_boundaries_obj, "*") as cursor:
             for row in cursor:
                 count += 1
-        del cursor
+                
+        #NOTE uncomment this?
+        # del cursor
         # Check if the count is 0 and display a message if the definition query was successful or not.
         if count == 0:
             
@@ -246,10 +255,12 @@ class TraplineBoundaries(object):
 
 
         # Specify the trapline boundary layer you want to export features from
-        application_trapline_boundary_path = os.path.join(data_dir, 'Scripting Data', 'Trapline_Boundaries_Export.shp')
-        arcpy.AddMessage(f"Trapline boundary path: {application_trapline_boundary_path}")
+        #NOTE
+        #\\spatialfiles.bcgov\work\srm\nel\Local\Geomatics\Workarea\SharedWork\Trapline_Territories\Data\Trapline_Boundaries.shp
+        # application_trapline_boundary_path = os.path.join(data_dir,'Trapline_Boundaries.shp')
+        # arcpy.AddMessage(f"Trapline boundary path: {application_trapline_boundary_path}")
 
-        # Specify the output file path for the exported feature
+        # Specify the output file path for the exported feature to be exported to
         application_trapline_boundary = os.path.join(data_subdir, f'{file_num}.shp')
         arcpy.AddMessage(f"Output feature path: {application_trapline_boundary}")
 
@@ -263,7 +274,7 @@ class TraplineBoundaries(object):
         try:
             arcpy.management.MakeFeatureLayer(all_trapline_boundaries_obj, "temp_layer") 
             # Make feature layer always creates a temporary layer. Its held in memory and will be deleted upon exit.  
-            arcpy.AddMessage("Feature layer created.")
+            arcpy.AddMessage("Temp Feature layer created.")
         except arcpy.ExecuteError as e:
             arcpy.AddMessage("MakeFeatureLayer_management error:", e)
             exit()  # Exit the script if there's an error
@@ -273,9 +284,9 @@ class TraplineBoundaries(object):
             try:
                 
                 arcpy.management.CopyFeatures("temp_layer", application_trapline_boundary) # Layer has been created (No longer just a path)
-                arcpy.AddMessage("Export process complete.")
+                arcpy.AddMessage("Created temp layer using copyFeatures")
             except arcpy.ExecuteError as e:
-                arcpy.AddMessage("CopyFeatures_management error:", e)
+                arcpy.AddMessage("CopyFeatures_management error")
         else:
             arcpy.AddMessage("Temporary layer 'temp_layer' does not exist.")
             exit()
@@ -300,7 +311,7 @@ class TraplineBoundaries(object):
                 area_hectares = calculate_area_in_hectares(row[0])
                 row[1] = area_hectares  # Update the field with the area in hectares
                 cursor.updateRow(row)
-                del cursor  # Delete the cursor after it has completed its task
+                 # Delete the cursor after it has completed its task
                 arcpy.AddMessage("Deleted cursor")
                 # Format the area to two decimal points
                 formatted_area = f"{area_hectares:.2f} ha."
@@ -323,7 +334,7 @@ class TraplineBoundaries(object):
         arcpy.AddMessage(f"Output feature path: {clipped_cabins_output}")
         # Clip the "Trapline Cabins" layer based on the feature layer\
 
-        arcpy.analysis.Clip("All Trapline Cabins", application_trapline_boundary, clipped_cabins_output)  # After the clip, the clipped cabins output path has now become a layer
+        arcpy.analysis.Clip("t", application_trapline_boundary, clipped_cabins_output)  # After the clip, the clipped cabins output path has now become a layer
 
         arcpy.AddMessage(f"Clipping of trapline boundary to Crown Lands layer completed.") 
 
@@ -424,19 +435,19 @@ class TraplineBoundaries(object):
 
         map_obj = lyt.listElements('MAPFRAME_ELEMENT', 'Map Frame')[0]
 
-        # use the zoom_feature_layer for zooming
-        arcpy.SelectLayerByAttribute_management(zoom_feature_layer, "NEW_SELECTION", "1=1")
+        # # use the zoom_feature_layer for zooming
+        # arcpy.SelectLayerByAttribute_management(zoom_feature_layer, "NEW_SELECTION", "1=1")
 
-        # zoom to selected featues within the map fram using the zoom feature layer = new_boundaries_layer_name
-        map_obj.zoomToAllLayers(True)
+        # # zoom to selected featues within the map fram using the zoom feature layer = new_boundaries_layer_name
+        # map_obj.zoomToAllLayers(True)
         #clear selection
-        arcpy.SelectLayerByAttribute_management(zoom_feature_layer, "CLEAR_SELECTION")
+        # arcpy.SelectLayerByAttribute_management(zoom_feature_layer, "CLEAR_SELECTION")
 
-        map_obj.camera.scale = 250000
-        arcpy.AddMessage(f"Zoomed to feature in {zoom_feature_layer} and set scale to : {map_obj.camera.scale}")
+        # map_obj.camera.scale = 250000
+        # arcpy.AddMessage(f"Zoomed to feature in {zoom_feature_layer} and set scale to : {map_obj.camera.scale}")
 
-        # Refresh the map frame to reflect the symbology changes
-        map_obj.camera.setExtent(map_obj.camera.getExtent())  # Forces a redraw by resetting the map extent
+        # # Refresh the map frame to reflect the symbology changes
+        # map_obj.camera.setExtent(map_obj.camera.getExtent())  # Forces a redraw by resetting the map extent
 
         # Save aprx for trapline boundary map automation project to preserve changes and allow users to open the aprx to view map and make adjustments if required.
         aprx.saveACopy(os.path.join(aprx_subdir, f'{file_num}.aprx'))
