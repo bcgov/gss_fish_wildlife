@@ -334,7 +334,7 @@ class TraplineBoundaries(object):
         arcpy.AddMessage(f"Output feature path: {clipped_cabins_output}")
         # Clip the "Trapline Cabins" layer based on the feature layer\
 
-        arcpy.analysis.Clip("t", application_trapline_boundary, clipped_cabins_output)  # After the clip, the clipped cabins output path has now become a layer
+        arcpy.analysis.Clip(all_trapline_cabins_obj, application_trapline_boundary, clipped_cabins_output)  # After the clip, the clipped cabins output path has now become a layer
 
         arcpy.AddMessage(f"Clipping of trapline boundary to Crown Lands layer completed.") 
 
