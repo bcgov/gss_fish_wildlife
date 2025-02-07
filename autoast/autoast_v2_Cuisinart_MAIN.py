@@ -38,12 +38,11 @@ import time
 # Test Comment
 
 ## *** INPUT YOUR EXCEL FILE NAME HERE ***
-excel_file = 'alan_jobs.xlsx'
+excel_file = 'Cariboo_replacement_2_jobs.xlsx'
 
 # Set the job timeout further down. Use CNTL + F to search for JOB_TIMEOUT
 
-# Number of CPUS to use for multiprocessing ** Currently not used
-NUM_CPUS = mp.cpu_count()
+
 ###############################################################################################################################################################################
 # Set up logging
 

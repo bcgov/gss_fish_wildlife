@@ -5,7 +5,7 @@ import arcpy
 
 def import_ast(logger):
     # Get the toolbox path from environment variables
-    ast_toolbox = os.getenv('TOOLBOX') # File path 
+    ast_toolbox = os.getenv('TOOLBOX_ALPHA') # File path 
     #NOTE transfer this to modular version
     ast_tool_alias = os.getenv("TOOLBOXALIAS") # Alias name
 
